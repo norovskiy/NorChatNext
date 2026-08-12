@@ -5,24 +5,39 @@ const api = axios.create({
   withCredentials: true,
 });
 
+console.log('🌐 API baseURL:', api.defaults.baseURL);
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('norchat_token');
-    if (token) {
+    console.log('🔑 Token in interceptor:', token ? '✅ exists' : '❌ not found');
+    
+    if (token && token !== 'undefined' && token !== 'null') {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('✅ Authorization header added');
+    } else {
+      console.log('❌ No valid token, skipping Authorization');
     }
+    
+    console.log('📡 Request:', config.method.toUpperCase(), config.baseURL + config.url);
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error('❌ Request interceptor error:', error);
+    return Promise.reject(error);
+  }
 );
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('✅ Response:', response.status, response.config.url);
+    return response;
+  },
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('norchat_token');
-      window.location.href = '/login';
-    }
+    console.error('❌ Response error:', error.response?.status, error.config?.url);
+    console.error('❌ Error data:', error.response?.data);
+    
+    // НЕ ДЕЛАЕМ РЕЛОАД! Просто возвращаем ошибку
     return Promise.reject(error);
   }
 );

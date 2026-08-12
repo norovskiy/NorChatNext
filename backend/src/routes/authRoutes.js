@@ -3,18 +3,24 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const {
   register,
+  verifyRegistrationCode,
   login,
   googleAuth,
   getMe,
-  updateProfile
+  updateProfile,
+  forgotPassword,
+  resetPassword
 } = require('../controllers/authController');
 
-// ========== ПУБЛИЧНЫЕ МАРШРУТЫ ==========
+// Публичные роуты (авторизация и регистрация)
 router.post('/register', register);
+router.post('/verify-registration', verifyRegistrationCode);
 router.post('/login', login);
 router.post('/google', googleAuth);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
-// ========== ЗАЩИЩЁННЫЕ МАРШРУТЫ ==========
+// Защищенные роуты (требуют токен)
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 

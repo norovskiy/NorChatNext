@@ -1,20 +1,12 @@
 {
   "name": "norchat-backend",
   "version": "1.0.0",
-  "description": "NorChat Backend Server",
+  "description": "NorChat Backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": [
-    "norchat",
-    "chat",
-    "socketio",
-    "mongodb"
-  ],
-  "author": "NorChat Team",
-  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "mongoose": "^7.0.0",
@@ -23,7 +15,8 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.0",
     "nodemailer": "^6.9.0",
-    "socket.io": "^4.6.0"
+    "socket.io": "^4.6.0",
+    "google-auth-library": "^9.0.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"

@@ -14,11 +14,10 @@ const userSchema = new mongoose.Schema({
   },
   nickname: {
     type: String,
-    required: false, // раньше было true — теперь заполняется на Welcome-странице после регистрации
+    required: false,  // ✅ СДЕЛАЙ false
     trim: true,
     minlength: 2,
-    maxlength: 16,
-    default: null
+    maxlength: 16
   },
   username: {
     type: String,
@@ -30,35 +29,24 @@ const userSchema = new mongoose.Schema({
     maxlength: 16,
     match: /^[a-zA-Z0-9_.]+$/
   },
-  usernameLastChanged: {
-    type: Date,
-    default: null
-  },
   gender: {
     type: String,
     enum: ['male', 'female'],
-    required: true,
+    required: false,  // ✅ СДЕЛАЙ false
     default: 'male'
   },
   birthDate: {
     type: Date,
-    required: false, // раньше было true — теперь заполняется на Welcome-странице после регистрации
-    default: null
+    required: false  // ✅ СДЕЛАЙ false
   },
   age: {
     type: Number,
     min: 16,
-    max: 100,
-    default: null // явный default, чтобы не пытаться закастовать undefined/NaN при отсутствии birthDate
+    max: 100
   },
   region: {
     type: String,
-    default: 'International',
-    enum: [
-      'Tajikistan', 'Russia', 'Uzbekistan', 'Kazakhstan',
-      'USA', 'UK', 'Germany', 'France', 'Japan', 'China',
-      'India', 'International'
-    ]
+    default: 'International'
   },
   avatar: {
     type: String,
@@ -90,54 +78,18 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  followers: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  following: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  isPrivate: {
-    type: Boolean,
-    default: false
-  },
-  hideFollowers: {
-    type: Boolean,
-    default: false
-  },
-  spacesCount: {
-    type: Number,
-    default: 0
-  },
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  verificationCode: {
-    type: String,
-    default: null
-  },
-  googleId: {
-    type: String,
-    default: null,
-    sparse: true
-  },
-  resetPasswordCode: {
-    type: String,
-    default: null
-  },
-  resetPasswordExpires: {
-    type: Date,
-    default: null
-  }
-}, {
-  timestamps: true
-});
+  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  isPrivate: { type: Boolean, default: false },
+  hideFollowers: { type: Boolean, default: false },
+  spacesCount: { type: Number, default: 0 },
+  isVerified: { type: Boolean, default: false },
+  verificationCode: { type: String, default: null },
+  googleId: { type: String, default: null, sparse: true, unique: true },
+  resetPasswordCode: { type: String, default: null },
+  resetPasswordExpires: { type: Date, default: null }
+}, { timestamps: true });
 
-userSchema.index({ email: 1 });
-userSchema.index({ googleId: 1 });
-userSchema.index({ username: 1 });
 userSchema.index({ resetPasswordCode: 1 });
 userSchema.index({ region: 1 });
 
