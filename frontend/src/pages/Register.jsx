@@ -1,25 +1,36 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { 
+  Mail, 
+  Lock, 
+  AtSign, 
+  Calendar, 
+  Sparkles, 
+  AlertCircle, 
+  Loader2, 
+  ChevronRight,
+  ShieldCheck
+} from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import { StarsBackground } from '../components/Background/StarsBackgroundDemo';
+import MiniMusicPlayer from '../components/Background/MiniMusicPlayer';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register, verifyCode } = useAuthStore();
 
-  // Локальный loading, чтобы не размонтировать компонент при запросе
   const [loading, setLoading] = useState(false);
-
   const [step, setStep] = useState('register');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [age, setAge] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [gender, setGender] = useState('male');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // ========== ШАГ 1 ==========
   const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
@@ -28,10 +39,9 @@ const Register = () => {
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedUsername = username.trim().toLowerCase();
     const trimmedPassword = password.trim();
-    const parsedAge = parseInt(age);
 
-    if (!trimmedEmail || !trimmedUsername || !trimmedPassword || !age) {
-      setError('Все поля обязательны');
+    if (!trimmedEmail || !trimmedUsername || !trimmedPassword || !birthDate) {
+      setError('Заполните все поля');
       return;
     }
 
@@ -41,22 +51,27 @@ const Register = () => {
     }
 
     if (trimmedUsername.length < 3) {
-      setError('Username должен быть минимум 3 символа');
+      setError('Username минимум 3 символа');
       return;
     }
 
     if (trimmedPassword.length < 6) {
-      setError('Пароль должен быть минимум 6 символов');
+      setError('Пароль минимум 6 символов');
       return;
     }
 
-    if (isNaN(parsedAge) || parsedAge < 16 || parsedAge > 120) {
-      setError('Вам должно быть 16 лет или больше');
-      return;
+    const birth = new Date(birthDate);
+    const today = new Date();
+    let calculatedAge = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      calculatedAge--;
     }
 
-    const birthDate = new Date();
-    birthDate.setFullYear(birthDate.getFullYear() - parsedAge);
+    if (isNaN(calculatedAge) || calculatedAge < 16 || calculatedAge > 120) {
+      setError('Вам должно быть от 16 до 120 лет');
+      return;
+    }
 
     const registerData = {
       email: trimmedEmail,
@@ -64,7 +79,7 @@ const Register = () => {
       password: trimmedPassword,
       gender,
       nickname: trimmedUsername,
-      birthDate: birthDate.toISOString().split('T')[0],
+      birthDate: birthDate,
       region: 'International',
     };
 
@@ -75,8 +90,8 @@ const Register = () => {
       setLoading(false);
 
       if (result && result.success) {
-        setSuccess('✅ Код подтверждения отправлен на ваш email!');
-        setStep('verify'); // ТЕПЕРЬ СТЕЙТ НЕ СБРОСИТСЯ!
+        setSuccess('✅ Код отправлен на ваш email!');
+        setStep('verify');
       } else {
         setError(result?.message || 'Ошибка регистрации');
       }
@@ -86,7 +101,6 @@ const Register = () => {
     }
   };
 
-  // ========== ШАГ 2 ==========
   const handleVerify = async (e) => {
     e.preventDefault();
     setError('');
@@ -104,8 +118,8 @@ const Register = () => {
       setLoading(false);
 
       if (result && result.success) {
-        setSuccess('✅ Аккаунт успешно подтвержден!');
-        setTimeout(() => navigate('/', { replace: true }), 1500);
+        setSuccess('✅ Аккаунт подтвержден!');
+        setTimeout(() => navigate('/', { replace: true }), 1000);
       } else {
         setError(result?.message || 'Неверный код подтверждения');
       }
@@ -116,171 +130,255 @@ const Register = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#0A0A0C] text-white flex items-center justify-center p-4 overflow-hidden">
-      <div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[140px] opacity-20 pointer-events-none z-0"
-        style={{ background: 'radial-gradient(circle, #FF6B00 0%, transparent 70%)' }}
+    <div className="relative min-h-screen overflow-hidden bg-[#060608] text-white flex items-center justify-center p-4">
+      <StarsBackground 
+        starColor="#FFFFFF"
+        factor={0.08}
+        speed={0.8}
+        className="absolute inset-0 w-full h-full"
       />
 
-      <div className="relative z-10 w-full max-w-md bg-[#141418]/80 backdrop-blur-2xl border border-[#26262E] rounded-3xl p-8 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
-        
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
-            Nor<span className="text-[#FF6B00]">Chat</span>
-          </h1>
-          <p className="text-[#8E8E93] text-sm">
-            {step === 'register' ? 'Создайте новый аккаунт' : 'Подтверждение почты'}
-          </p>
-        </div>
+      {/* Мягкое оранжевое свечение */}
+      <div className="absolute w-[360px] h-[360px] bg-orange-500/15 rounded-full blur-[130px] pointer-events-none -z-0" />
 
-        {error && (
-          <div className="mb-5 p-3.5 bg-[#FF3B30]/10 border border-[#FF3B30]/30 rounded-xl text-[#FF3B30] text-sm text-center font-medium">
-            {error}
-          </div>
-        )}
+      <MiniMusicPlayer autoPlay={true} />
 
-        {success && (
-          <div className="mb-5 p-3.5 bg-[#00E676]/10 border border-[#00E676]/30 rounded-xl text-[#00E676] text-sm text-center font-medium">
-            {success}
-          </div>
-        )}
+      <div className="relative z-10 w-full max-w-[430px]">
+        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
+          
+          {/* Чёрная карточка без синевы */}
+          <div className="relative bg-[#080400] backdrop-blur-2xl border border-zinc-800/90 rounded-3xl p-7 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.95)] overflow-hidden">
+            
+            {/* Оранжевая нить */}
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-85" />
 
-        {/* ================= ФОРМА РЕГИСТРАЦИИ ================= */}
-        {step === 'register' && (
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#8E8E93] mb-2 pl-1">Email</label>
-              <input
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1A1A20] border border-[#26262E] rounded-xl text-white placeholder-[#8E8E93]/50 focus:outline-none focus:border-[#FF6B00] transition-all"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#8E8E93] mb-2 pl-1">Username</label>
-              <input
-                type="text"
-                placeholder="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
-                className="w-full px-4 py-3 bg-[#1A1A20] border border-[#26262E] rounded-xl text-white placeholder-[#8E8E93]/50 focus:outline-none focus:border-[#FF6B00] transition-all"
-                required
-                minLength={3}
-                maxLength={16}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#8E8E93] mb-2 pl-1">Пароль</label>
-              <input
-                type="password"
-                placeholder="Минимум 6 символов"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1A1A20] border border-[#26262E] rounded-xl text-white placeholder-[#8E8E93]/50 focus:outline-none focus:border-[#FF6B00] transition-all"
-                required
-                minLength={6}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#8E8E93] mb-2 pl-1">Возраст</label>
-                <input
-                  type="number"
-                  placeholder="16+"
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#1A1A20] border border-[#26262E] rounded-xl text-white placeholder-[#8E8E93]/50 focus:outline-none focus:border-[#FF6B00] transition-all"
-                  required
-                  min={16}
-                  max={120}
-                />
+            {/* Логотип */}
+            <div className="flex justify-center mb-3">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-600 via-orange-500 to-amber-500 flex items-center justify-center shadow-[0_0_25px_rgba(249,115,22,0.45)]">
+                <span className="text-2xl font-black text-white tracking-wider">N</span>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-[#8E8E93] mb-2 pl-1">Пол</label>
-                <div className="flex bg-[#1A1A20] border border-[#26262E] rounded-xl overflow-hidden p-1">
+            {/* Заголовок */}
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-black tracking-tight">
+                <span className="text-white">Nor</span>
+                <span className="text-orange-500 drop-shadow-[0_0_12px_rgba(249,115,22,0.5)]">Chat</span>
+              </h1>
+            </div>
+
+            {/* Сообщения об ошибке / успехе */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <p className="text-red-300 text-xs font-medium">{error}</p>
+              </div>
+            )}
+            {success && (
+              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-2.5">
+                <Sparkles className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <p className="text-emerald-300 text-xs font-medium">{success}</p>
+              </div>
+            )}
+
+            {/* ================= ШАГ 1: РЕГИСТРАЦИЯ ================= */}
+            {step === 'register' && (
+              <form onSubmit={handleRegister} className="space-y-3.5">
+                
+                {/* EMAIL */}
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <input
+                      type="email"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* USERNAME */}
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Username</label>
+                  <div className="relative">
+                    <AtSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <input
+                      type="text"
+                      placeholder="alex_nor"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
+                      className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                      required
+                      minLength={3}
+                      maxLength={16}
+                    />
+                  </div>
+                </div>
+
+                {/* ПАРОЛЬ */}
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Пароль</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+
+                {/* ОБЪЕДИНЁННАЯ СТРОКА: ДАТА РОЖДЕНИЯ + ПОЛ */}
+                <div className="grid grid-cols-2 gap-3">
+                  
+                  {/* ДАТА РОЖДЕНИЯ */}
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">
+                      Дата рождения
+                    </label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+                      <input
+                        type="date"
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                        className="w-full pl-9 pr-2 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all [color-scheme:dark]"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* ПОЛ С АНИМИРОВАННЫМ ПЕРЕКЛЮЧАТЕЛЕМ */}
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Пол</label>
+                    <div className="relative flex bg-[#141418] border border-zinc-800 p-1 rounded-xl">
+                      
+                      <button
+                        type="button"
+                        onClick={() => setGender('male')}
+                        className={`relative flex-1 py-3.5 text-xs font-bold rounded-lg transition-colors cursor-pointer z-10 ${
+                          gender === 'male' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+                        }`}
+                      >
+                        {gender === 'male' && (
+                          <motion.div
+                            layoutId="activeGenderTab"
+                            className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-600 rounded-lg -z-10 shadow-[0_0_12px_rgba(249,115,22,0.35)]"
+                            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                          />
+                        )}
+                        👨 Муж
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setGender('female')}
+                        className={`relative flex-1 py-3.5 text-xs font-bold rounded-lg transition-colors cursor-pointer z-10 ${
+                          gender === 'female' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+                        }`}
+                      >
+                        {gender === 'female' && (
+                          <motion.div
+                            layoutId="activeGenderTab"
+                            className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-600 rounded-lg -z-10 shadow-[0_0_12px_rgba(249,115,22,0.35)]"
+                            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                          />
+                        )}
+                        👩 Жен
+                      </button>
+
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* КНОПКА ОТПРАВКИ */}
+                <div className="pt-2">
                   <button
-                    type="button"
-                    onClick={() => setGender('male')}
-                    className={`flex-1 py-2 text-sm rounded-lg transition-all ${gender === 'male' ? 'bg-[#FF6B00] text-white' : 'text-[#8E8E93] hover:text-white'}`}
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-4 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer active:scale-[0.99]"
                   >
-                    Муж
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGender('female')}
-                    className={`flex-1 py-2 text-sm rounded-lg transition-all ${gender === 'female' ? 'bg-[#FF6B00] text-white' : 'text-[#8E8E93] hover:text-white'}`}
-                  >
-                    Жен
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Загрузка...
+                      </span>
+                    ) : (
+                      'Зарегистрироваться'
+                    )}
                   </button>
                 </div>
-              </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-4 py-3.5 bg-[#FF6B00] hover:bg-[#FF7B1A] active:scale-[0.98] text-white font-bold text-sm rounded-xl transition-all shadow-[0_4px_20px_rgba(255,107,0,0.3)] disabled:opacity-50 cursor-pointer"
-            >
-              {loading ? 'Загрузка...' : 'Зарегистрироваться'}
-            </button>
+                {/* ПЕРЕХОД К ВХОДУ */}
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/login')}
+                    className="text-zinc-400 hover:text-white text-xs transition-colors inline-flex items-center gap-1 group cursor-pointer"
+                  >
+                    Уже есть аккаунт? <span className="text-orange-500 font-bold group-hover:underline">Войти</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-orange-500 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
 
-            <div className="text-center pt-2">
-              <Link to="/login" className="text-xs text-[#8E8E93] hover:text-white transition-colors">
-                Уже есть аккаунт? <span className="text-[#FF6B00]">Войти</span>
-              </Link>
-            </div>
-          </form>
-        )}
+              </form>
+            )}
 
-        {/* ================= ФОРМА ВВОДА КОДА ================= */}
-        {step === 'verify' && (
-          <form onSubmit={handleVerify} className="space-y-4">
-            <div className="text-center mb-4">
-              <p className="text-sm text-[#8E8E93]">
-                Мы отправили код на <br/> <span className="text-white font-semibold">{email}</span>
-              </p>
-            </div>
+            {/* ================= ШАГ 2: ПОДТВЕРЖДЕНИЕ ================= */}
+            {step === 'verify' && (
+              <form onSubmit={handleVerify} className="space-y-3.5">
+                <div className="text-center mb-2">
+                  <div className="inline-flex p-2.5 bg-orange-500/10 border border-orange-500/20 rounded-xl mb-2 text-orange-400">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Код отправлен на <br/>
+                    <span className="text-white font-semibold">{email}</span>
+                  </p>
+                </div>
 
-            <div>
-              <input
-                type="text"
-                placeholder="000000"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                className="w-full py-3.5 bg-[#1A1A20] border border-[#26262E] rounded-xl text-white placeholder-[#8E8E93]/30 focus:outline-none focus:border-[#FF6B00] transition-all text-center text-2xl tracking-[12px] font-mono font-bold"
-                required
-                maxLength={6}
-                autoFocus
-              />
-            </div>
+                <input
+                  type="text"
+                  placeholder="000000"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="w-full py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 text-center text-2xl tracking-[10px] font-mono font-bold"
+                  required
+                  maxLength={6}
+                  autoFocus
+                />
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 py-3.5 bg-[#FF6B00] hover:bg-[#FF7B1A] active:scale-[0.98] text-white font-bold text-sm rounded-xl transition-all shadow-[0_4px_20px_rgba(255,107,0,0.3)] disabled:opacity-50 cursor-pointer"
-            >
-              {loading ? 'Проверка...' : 'Подтвердить'}
-            </button>
-            
-            <div className="text-center pt-2">
-              <button
-                type="button"
-                onClick={() => setStep('register')}
-                className="text-xs text-[#8E8E93] hover:text-white transition-colors underline bg-transparent border-none cursor-pointer"
-              >
-                Вернуться назад
-              </button>
-            </div>
-          </form>
-        )}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer"
+                >
+                  {loading ? 'Проверка...' : 'Подтвердить код'}
+                </button>
 
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setStep('register')}
+                    className="text-xs text-zinc-500 hover:text-white transition-colors underline bg-transparent border-none cursor-pointer"
+                  >
+                    Назад к регистрации
+                  </button>
+                </div>
+              </form>
+            )}
+
+          </div>
+        </motion.div>
       </div>
     </div>
   );

@@ -410,7 +410,7 @@ const resetPassword = async (req, res) => {
 
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
-      resetPasswordCode: code,
+      resetPasswordCode: code.trim(),
       resetPasswordExpires: { $gt: new Date() }
     });
 
@@ -420,9 +420,17 @@ const resetPassword = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
+    // Меняем пароль, подтверждаем аккаунт и очищаем одноразовый код
     await User.updateOne(
       { _id: user._id },
-      { $set: { password: hashedPassword, resetPasswordCode: null, resetPasswordExpires: null } }
+      { 
+        $set: { 
+          password: hashedPassword, 
+          isVerified: true, // 👈 Теперь аккаунт автоматически становится подтверждённым!
+          resetPasswordCode: null, 
+          resetPasswordExpires: null 
+        } 
+      }
     );
 
     res.json({ success: true, message: 'Password reset successfully' });

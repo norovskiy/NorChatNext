@@ -1,116 +1,129 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { LogOut, Settings, Users, MessageSquare, Sparkles, Zap } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
-import ProfileModal from '../components/Modals/ProfileModal';
+import { StarsBackground } from '../components/Background/StarsBackgroundDemo';
 
 const Homepage = () => {
   const navigate = useNavigate();
-  const { user, logout, updateUser, isAuthenticated } = useAuthStore();
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const { user, logout, isAuthenticated } = useAuthStore();
+  
+  const [showAnimation, setShowAnimation] = useState(() => {
+    const saved = localStorage.getItem('norchat_bg_animation');
+    return saved !== null ? saved === 'true' : true;
+  });
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
-      return;
     }
-
-    // Если у пользователя нет nickname или birthDate — показываем модалку
-    if (!user?.nickname || !user?.birthDate) {
-      setShowProfileModal(true);
-    }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, navigate]);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const handleProfileSubmit = async (data) => {
-    setIsProfileLoading(true);
-    try {
-      const result = await updateUser(data);
-      if (result.success) {
-        setShowProfileModal(false);
-      }
-      return result;
-    } finally {
-      setIsProfileLoading(false);
-    }
+  const toggleBackground = () => {
+    const newState = !showAnimation;
+    setShowAnimation(newState);
+    localStorage.setItem('norchat_bg_animation', String(newState));
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="border-b border-white/10 px-4 sm:px-6 lg:px-8 py-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold">
-            <span className="text-white">Nor</span>
-            <span className="text-orange-500">Chat</span>
-          </h1>
-          <div className="flex items-center gap-4">
-            <span className="text-white/60 text-sm">
-              👋 {user?.nickname || 'User'}
-            </span>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-500/20 border border-red-500/40 rounded-xl text-red-200 text-sm hover:bg-red-500/30 transition-all"
-            >
-              Выйти
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="relative min-h-screen bg-[#060608] text-white">
+      {showAnimation && (
+        <StarsBackground 
+          starColor="#FFFFFF"
+          factor={0.06}
+          speed={0.6}
+          className="absolute inset-0 w-full h-full"
+        />
+      )}
 
-      <main className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl mb-6">
-            <h2 className="text-xl font-semibold mb-2 text-white">
-              Добро пожаловать, {user?.nickname || 'User'}! 👋
-            </h2>
-            <p className="text-white/60 text-sm">
-              Это ваша главная страница в NorChat.
-            </p>
-          </div>
+      <div className="absolute w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-[150px] pointer-events-none -z-0" />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl hover:bg-white/10 transition-all cursor-pointer">
-              <div className="text-3xl mb-3">💬</div>
-              <h3 className="text-white font-semibold">Чаты</h3>
-              <p className="text-white/40 text-sm mt-1">Ваши активные чаты</p>
+      <div className="relative z-10 min-h-screen flex flex-col">
+        <header className="border-b border-zinc-800/90 px-4 sm:px-6 lg:px-8 py-3.5 bg-[#060608]/80 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 className="text-xl font-black tracking-tight">
+              <span className="text-white">Nor</span>
+              <span className="text-orange-500 drop-shadow-[0_0_12px_rgba(249,115,22,0.4)]">Chat</span>
+            </h1>
+            
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleBackground}
+                className="px-3 py-1.5 text-[10px] bg-zinc-800/50 border border-zinc-700/50 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700/50 transition-all flex items-center gap-1.5"
+              >
+                {showAnimation ? (
+                  <>
+                    <Zap size={13} className="text-orange-400" />
+                    Фон вкл
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={13} className="text-zinc-400" />
+                    Фон выкл
+                  </>
+                )}
+              </button>
+              
+              <div className="flex items-center gap-2.5">
+                <span className="text-zinc-400 text-xs">
+                  {user?.nickname || user?.username || 'User'}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="px-3.5 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] hover:bg-red-500/20 transition-all flex items-center gap-1.5"
+                >
+                  <LogOut size={13} />
+                  Выйти
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-[#141418] border border-zinc-800/90 rounded-2xl p-5 backdrop-blur-sm mb-5">
+              <h2 className="text-base font-semibold text-white">
+                Добро пожаловать, {user?.nickname || user?.username || 'User'}! 👋
+              </h2>
+              <p className="text-zinc-400 text-xs mt-0.5">Главная страница NorChat</p>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl hover:bg-white/10 transition-all cursor-pointer">
-              <div className="text-3xl mb-3">👥</div>
-              <h3 className="text-white font-semibold">Друзья</h3>
-              <p className="text-white/40 text-sm mt-1">Ваши друзья онлайн</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              <div className="bg-[#141418] border border-zinc-800/90 rounded-2xl p-5 hover:bg-zinc-800/30 transition-all cursor-pointer">
+                <div className="text-2xl mb-2">💬</div>
+                <h3 className="text-sm font-semibold text-white">Чаты</h3>
+                <p className="text-zinc-400 text-[11px] mt-0.5">Активные чаты</p>
+              </div>
+
+              <div className="bg-[#141418] border border-zinc-800/90 rounded-2xl p-5 hover:bg-zinc-800/30 transition-all cursor-pointer">
+                <div className="text-2xl mb-2">👥</div>
+                <h3 className="text-sm font-semibold text-white">Друзья</h3>
+                <p className="text-zinc-400 text-[11px] mt-0.5">Онлайн друзья</p>
+              </div>
+
+              <div className="bg-[#141418] border border-zinc-800/90 rounded-2xl p-5 hover:bg-zinc-800/30 transition-all cursor-pointer">
+                <div className="text-2xl mb-2">🚀</div>
+                <h3 className="text-sm font-semibold text-white">Spaces</h3>
+                <p className="text-zinc-400 text-[11px] mt-0.5">Ваши пространства</p>
+              </div>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl hover:bg-white/10 transition-all cursor-pointer">
-              <div className="text-3xl mb-3">🚀</div>
-              <h3 className="text-white font-semibold">Spaces</h3>
-              <p className="text-white/40 text-sm mt-1">Ваши пространства</p>
+            <div className="mt-5 p-3.5 bg-orange-500/5 border border-orange-500/10 rounded-xl">
+              <p className="text-orange-400 text-[11px] flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                Space Hub — скоро здесь появятся ваши комнаты!
+              </p>
             </div>
           </div>
-
-          <div className="mt-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl">
-            <p className="text-orange-500 text-sm flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-              Space Hub — скоро здесь появятся ваши комнаты!
-            </p>
-          </div>
-        </div>
-      </main>
-
-      <ProfileModal
-        isOpen={showProfileModal}
-        onClose={() => {
-          if (user?.nickname && user?.birthDate) {
-            setShowProfileModal(false);
-          }
-        }}
-        onSubmit={handleProfileSubmit}
-        isLoading={isProfileLoading}
-      />
+        </main>
+      </div>
     </div>
   );
 };

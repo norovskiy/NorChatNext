@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Mail, Lock, KeyRound, Sparkles, AlertCircle, Loader2, ArrowLeft, ChevronRight } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import { StarsBackground } from '../components/Background/StarsBackgroundDemo';
+import MiniMusicPlayer from '../components/Background/MiniMusicPlayer';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const { forgotPassword, resetPassword } = useAuthStore();
 
-  const [step, setStep] = useState('email'); // 'email' | 'reset'
+  const [step, setStep] = useState('email');
   const [loading, setLoading] = useState(false);
-
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // ========== ШАГ 1: ОТПРАВКА КОДА НА EMAIL ==========
   const handleSendCode = async (e) => {
     e.preventDefault();
     setError('');
@@ -36,8 +37,8 @@ const ForgotPassword = () => {
       setLoading(false);
 
       if (result && result.success) {
-        setSuccess('✅ Код для сброса пароля отправлен на ваш email!');
-        setStep('reset'); // Переходим к вводу кода и нового пароля
+        setSuccess('✅ Код отправлен на ваш email!');
+        setStep('reset');
       } else {
         setError(result?.message || 'Ошибка отправки кода');
       }
@@ -47,7 +48,6 @@ const ForgotPassword = () => {
     }
   };
 
-  // ========== ШАГ 2: ВВОД КОДА И НОВОГО ПАРОЛЯ ==========
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError('');
@@ -59,7 +59,7 @@ const ForgotPassword = () => {
     }
 
     if (newPassword.length < 6) {
-      setError('Новый пароль должен быть минимум 6 символов');
+      setError('Новый пароль минимум 6 символов');
       return;
     }
 
@@ -74,10 +74,10 @@ const ForgotPassword = () => {
       setLoading(false);
 
       if (result && result.success) {
-        setSuccess('✅ Пароль успешно изменён! Перенаправляем на страницу входа...');
+        setSuccess('✅ Пароль изменён! Перенаправляем...');
         setTimeout(() => navigate('/login', { replace: true }), 2000);
       } else {
-        setError(result?.message || 'Неверный код или ошибка сброса');
+        setError(result?.message || 'Неверный код');
       }
     } catch (err) {
       setLoading(false);
@@ -86,123 +86,157 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#0A0A0C] text-white flex items-center justify-center p-4 overflow-hidden">
-      {/* Фоновый оранжевый градиент */}
-      <div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[140px] opacity-20 pointer-events-none z-0"
-        style={{ background: 'radial-gradient(circle, #FF6B00 0%, transparent 70%)' }}
+    <div className="relative min-h-screen overflow-hidden bg-[#060608] text-white flex items-center justify-center p-4">
+      <StarsBackground 
+        starColor="#FFFFFF"
+        factor={0.08}
+        speed={0.8}
+        className="absolute inset-0 w-full h-full"
       />
 
-      <div className="relative z-10 w-full max-w-md bg-[#141418]/80 backdrop-blur-2xl border border-[#26262E] rounded-3xl p-8 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
-        
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
-            Nor<span className="text-[#FF6B00]">Chat</span>
-          </h1>
-          <p className="text-[#8E8E93] text-sm">
-            {step === 'email' ? 'Восстановление доступа' : 'Установка нового пароля'}
-          </p>
-        </div>
+      <div className="absolute w-[360px] h-[360px] bg-orange-500/15 rounded-full blur-[130px] pointer-events-none -z-0" />
 
-        {error && (
-          <div className="mb-5 p-3.5 bg-[#FF3B30]/10 border border-[#FF3B30]/30 rounded-xl text-[#FF3B30] text-sm text-center font-medium">
-            ❌ {error}
+      <MiniMusicPlayer autoPlay={true} />
+
+      <div className="relative z-10 w-full max-w-[430px]">
+        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
+          <div className="relative bg-[#080400] backdrop-blur-2xl border border-zinc-800/90 rounded-3xl p-7 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.95)] overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-85" />
+
+            <div className="flex justify-center mb-3">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-600 via-orange-500 to-amber-500 flex items-center justify-center shadow-[0_0_25px_rgba(249,115,22,0.45)]">
+                <span className="text-2xl font-black text-white tracking-wider">N</span>
+              </div>
+            </div>
+
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-black tracking-tight">
+                <span className="text-white">Nor</span>
+                <span className="text-orange-500 drop-shadow-[0_0_12px_rgba(249,115,22,0.5)]">Chat</span>
+              </h1>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <p className="text-red-300 text-xs font-medium">{error}</p>
+              </div>
+            )}
+            {success && (
+              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-2.5">
+                <Sparkles className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <p className="text-emerald-300 text-xs font-medium">{success}</p>
+              </div>
+            )}
+
+            {step === 'email' && (
+              <form onSubmit={handleSendCode} className="space-y-3.5">
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <input
+                      type="email"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-4 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer active:scale-[0.99]"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Отправка...
+                      </span>
+                    ) : (
+                      'Получить код'
+                    )}
+                  </button>
+                </div>
+
+                <div className="text-center pt-1">
+                  <Link to="/login" className="text-zinc-400 hover:text-white text-xs transition-colors inline-flex items-center gap-1 group">
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Вспомнил пароль
+                  </Link>
+                </div>
+              </form>
+            )}
+
+            {step === 'reset' && (
+              <form onSubmit={handleResetPassword} className="space-y-3.5">
+                <div className="text-center mb-1">
+                  <p className="text-xs text-zinc-400">
+                    Код отправлен на <br/>
+                    <span className="text-white font-semibold">{email}</span>
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Код</label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <input
+                      type="text"
+                      placeholder="000000"
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all text-center text-2xl tracking-[10px] font-mono"
+                      required
+                      maxLength={6}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Новый пароль</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <input
+                      type="password"
+                      placeholder="минимум 6 символов"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-4 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer active:scale-[0.99]"
+                  >
+                    {loading ? 'Сохранение...' : 'Сменить пароль'}
+                  </button>
+                </div>
+
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setStep('email')}
+                    className="text-zinc-500 hover:text-white text-[10px] transition-colors underline bg-transparent border-none cursor-pointer"
+                  >
+                    Изменить email
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
-        )}
-
-        {success && (
-          <div className="mb-5 p-3.5 bg-[#00E676]/10 border border-[#00E676]/30 rounded-xl text-[#00E676] text-sm text-center font-medium">
-            {success}
-          </div>
-        )}
-
-        {/* ================= ШАГ 1: ВВОД EMAIL ================= */}
-        {step === 'email' && (
-          <form onSubmit={handleSendCode} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#8E8E93] mb-2 pl-1">Email от аккаунта</label>
-              <input
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1A1A20] border border-[#26262E] rounded-xl text-white placeholder-[#8E8E93]/50 focus:outline-none focus:border-[#FF6B00] transition-all"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 py-3.5 bg-[#FF6B00] hover:bg-[#FF7B1A] active:scale-[0.98] text-white font-bold text-sm rounded-xl transition-all shadow-[0_4px_20px_rgba(255,107,0,0.3)] disabled:opacity-50 cursor-pointer"
-            >
-              {loading ? 'Отправка...' : 'Получить код'}
-            </button>
-
-            <div className="text-center pt-2">
-              <Link to="/login" className="text-xs text-[#8E8E93] hover:text-white transition-colors">
-                Вспомнили пароль? <span className="text-[#FF6B00]">Войти</span>
-              </Link>
-            </div>
-          </form>
-        )}
-
-        {/* ================= ШАГ 2: ВВОД КОДА И НОВОГО ПАРОЛЯ ================= */}
-        {step === 'reset' && (
-          <form onSubmit={handleResetPassword} className="space-y-4">
-            <div className="text-center mb-2">
-              <p className="text-sm text-[#8E8E93]">
-                Код отправлен на <br/> <span className="text-white font-semibold">{email}</span>
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#8E8E93] mb-2 pl-1">6-значный код</label>
-              <input
-                type="text"
-                placeholder="000000"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                className="w-full py-3 bg-[#1A1A20] border border-[#26262E] rounded-xl text-white placeholder-[#8E8E93]/30 focus:outline-none focus:border-[#FF6B00] transition-all text-center text-2xl tracking-[10px] font-mono font-bold"
-                required
-                maxLength={6}
-                autoFocus
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#8E8E93] mb-2 pl-1">Новый пароль</label>
-              <input
-                type="password"
-                placeholder="Минимум 6 символов"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1A1A20] border border-[#26262E] rounded-xl text-white placeholder-[#8E8E93]/50 focus:outline-none focus:border-[#FF6B00] transition-all"
-                required
-                minLength={6}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 py-3.5 bg-[#FF6B00] hover:bg-[#FF7B1A] active:scale-[0.98] text-white font-bold text-sm rounded-xl transition-all shadow-[0_4px_20px_rgba(255,107,0,0.3)] disabled:opacity-50 cursor-pointer"
-            >
-              {loading ? 'Сохранение...' : 'Сменить пароль'}
-            </button>
-            
-            <div className="text-center pt-2">
-              <button
-                type="button"
-                onClick={() => setStep('email')}
-                className="text-xs text-[#8E8E93] hover:text-white transition-colors underline bg-transparent border-none cursor-pointer"
-              >
-                Изменить email
-              </button>
-            </div>
-          </form>
-        )}
-
+        </motion.div>
       </div>
     </div>
   );
