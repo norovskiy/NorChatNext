@@ -101,6 +101,7 @@ const Register = () => {
     }
   };
 
+  // ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ==========
   const handleVerify = async (e) => {
     e.preventDefault();
     setError('');
@@ -114,12 +115,13 @@ const Register = () => {
     setLoading(true);
 
     try {
+      // ✅ ИСПРАВЛЕНО: verifyCode, а НЕ register!
       const result = await verifyCode(email, code);
       setLoading(false);
 
       if (result && result.success) {
-        setSuccess('✅ Аккаунт подтвержден!');
-        setTimeout(() => navigate('/', { replace: true }), 1000);
+        setSuccess('✅ Аккаунт подтвержден! Перенаправление...');
+        setTimeout(() => navigate('/welcome', { replace: true }), 1000);
       } else {
         setError(result?.message || 'Неверный код подтверждения');
       }
@@ -138,28 +140,21 @@ const Register = () => {
         className="absolute inset-0 w-full h-full"
       />
 
-      {/* Мягкое оранжевое свечение */}
       <div className="absolute w-[360px] h-[360px] bg-orange-500/15 rounded-full blur-[130px] pointer-events-none -z-0" />
 
       <MiniMusicPlayer autoPlay={true} />
 
       <div className="relative z-10 w-full max-w-[430px]">
         <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
-          
-          {/* Чёрная карточка без синевы */}
           <div className="relative bg-[#080400] backdrop-blur-2xl border border-zinc-800/90 rounded-3xl p-7 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.95)] overflow-hidden">
-            
-            {/* Оранжевая нить */}
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-85" />
 
-            {/* Логотип */}
             <div className="flex justify-center mb-3">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-600 via-orange-500 to-amber-500 flex items-center justify-center shadow-[0_0_25px_rgba(249,115,22,0.45)]">
                 <span className="text-2xl font-black text-white tracking-wider">N</span>
               </div>
             </div>
 
-            {/* Заголовок */}
             <div className="text-center mb-6">
               <h1 className="text-2xl font-black tracking-tight">
                 <span className="text-white">Nor</span>
@@ -167,7 +162,6 @@ const Register = () => {
               </h1>
             </div>
 
-            {/* Сообщения об ошибке / успехе */}
             {error && (
               <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2.5">
                 <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
@@ -181,11 +175,8 @@ const Register = () => {
               </div>
             )}
 
-            {/* ================= ШАГ 1: РЕГИСТРАЦИЯ ================= */}
             {step === 'register' && (
               <form onSubmit={handleRegister} className="space-y-3.5">
-                
-                {/* EMAIL */}
                 <div>
                   <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Email</label>
                   <div className="relative">
@@ -201,7 +192,6 @@ const Register = () => {
                   </div>
                 </div>
 
-                {/* USERNAME */}
                 <div>
                   <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Username</label>
                   <div className="relative">
@@ -219,7 +209,6 @@ const Register = () => {
                   </div>
                 </div>
 
-                {/* ПАРОЛЬ */}
                 <div>
                   <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Пароль</label>
                   <div className="relative">
@@ -236,14 +225,9 @@ const Register = () => {
                   </div>
                 </div>
 
-                {/* ОБЪЕДИНЁННАЯ СТРОКА: ДАТА РОЖДЕНИЯ + ПОЛ */}
                 <div className="grid grid-cols-2 gap-3">
-                  
-                  {/* ДАТА РОЖДЕНИЯ */}
                   <div>
-                    <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">
-                      Дата рождения
-                    </label>
+                    <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Дата рождения</label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
                       <input
@@ -256,11 +240,9 @@ const Register = () => {
                     </div>
                   </div>
 
-                  {/* ПОЛ С АНИМИРОВАННЫМ ПЕРЕКЛЮЧАТЕЛЕМ */}
                   <div>
                     <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Пол</label>
                     <div className="relative flex bg-[#141418] border border-zinc-800 p-1 rounded-xl">
-                      
                       <button
                         type="button"
                         onClick={() => setGender('male')}
@@ -277,7 +259,6 @@ const Register = () => {
                         )}
                         👨 Муж
                       </button>
-
                       <button
                         type="button"
                         onClick={() => setGender('female')}
@@ -294,13 +275,10 @@ const Register = () => {
                         )}
                         👩 Жен
                       </button>
-
                     </div>
                   </div>
-
                 </div>
 
-                {/* КНОПКА ОТПРАВКИ */}
                 <div className="pt-2">
                   <button
                     type="submit"
@@ -318,7 +296,6 @@ const Register = () => {
                   </button>
                 </div>
 
-                {/* ПЕРЕХОД К ВХОДУ */}
                 <div className="text-center pt-1">
                   <button
                     type="button"
@@ -329,11 +306,9 @@ const Register = () => {
                     <ChevronRight className="w-3.5 h-3.5 text-orange-500 group-hover:translate-x-0.5 transition-transform" />
                   </button>
                 </div>
-
               </form>
             )}
 
-            {/* ================= ШАГ 2: ПОДТВЕРЖДЕНИЕ ================= */}
             {step === 'verify' && (
               <form onSubmit={handleVerify} className="space-y-3.5">
                 <div className="text-center mb-2">
@@ -376,7 +351,6 @@ const Register = () => {
                 </div>
               </form>
             )}
-
           </div>
         </motion.div>
       </div>
