@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, KeyRound, Sparkles, AlertCircle, Loader2, ArrowLeft, ChevronRight } from 'lucide-react';
+import { 
+  Mail, 
+  Lock, 
+  KeyRound, 
+  Sparkles, 
+  AlertCircle, 
+  Loader2, 
+  ArrowLeft, 
+  Eye, 
+  EyeOff, 
+  ShieldCheck 
+} from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { StarsBackground } from '../components/Background/StarsBackgroundDemo';
 import MiniMusicPlayer from '../components/Background/MiniMusicPlayer';
@@ -15,6 +26,7 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -42,7 +54,7 @@ const ForgotPassword = () => {
       } else {
         setError(result?.message || 'Ошибка отправки кода');
       }
-    } catch (err) {
+    } catch {
       setLoading(false);
       setError('Не удалось отправить запрос');
     }
@@ -59,7 +71,7 @@ const ForgotPassword = () => {
     }
 
     if (newPassword.length < 6) {
-      setError('Новый пароль минимум 6 символов');
+      setError('Новый пароль должен быть минимум 6 символов');
       return;
     }
 
@@ -75,14 +87,22 @@ const ForgotPassword = () => {
 
       if (result && result.success) {
         setSuccess('✅ Пароль изменён! Перенаправляем...');
-        setTimeout(() => navigate('/login', { replace: true }), 2000);
+        setTimeout(() => navigate('/login', { replace: true }), 1500);
       } else {
-        setError(result?.message || 'Неверный код');
+        setError(result?.message || 'Неверный код или ошибка сброса');
       }
-    } catch (err) {
+    } catch {
       setLoading(false);
       setError('Ошибка при сбросе пароля');
     }
+  };
+
+  const handleBackToEmail = () => {
+    setStep('email');
+    setCode('');
+    setNewPassword('');
+    setError('');
+    setSuccess('');
   };
 
   return (
@@ -91,7 +111,7 @@ const ForgotPassword = () => {
         starColor="#FFFFFF"
         factor={0.08}
         speed={0.8}
-        className="absolute inset-0 w-full h-full"
+        className="absolute inset-0 w-full h-full pointer-events-none"
       />
 
       <div className="absolute w-[360px] h-[360px] bg-orange-500/15 rounded-full blur-[130px] pointer-events-none -z-0" />
@@ -132,7 +152,7 @@ const ForgotPassword = () => {
             {step === 'email' && (
               <form onSubmit={handleSendCode} className="space-y-3.5">
                 <div>
-                  <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Email</label>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Email аккаунта</label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                     <input
@@ -140,7 +160,8 @@ const ForgotPassword = () => {
                       placeholder="your@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                      disabled={loading}
+                      className="w-full pl-10 pr-3.5 py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 disabled:opacity-50 transition-all"
                       required
                     />
                   </div>
@@ -150,7 +171,7 @@ const ForgotPassword = () => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-4 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer active:scale-[0.99]"
+                    className="w-full py-3.5 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer active:scale-[0.99]"
                   >
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
@@ -158,14 +179,14 @@ const ForgotPassword = () => {
                         Отправка...
                       </span>
                     ) : (
-                      'Получить код'
+                      'Получить код восстановления'
                     )}
                   </button>
                 </div>
 
                 <div className="text-center pt-1">
                   <Link to="/login" className="text-zinc-400 hover:text-white text-xs transition-colors inline-flex items-center gap-1 group">
-                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <ArrowLeft className="w-3.5 h-3.5 text-zinc-400 group-hover:-translate-x-0.5 transition-transform" />
                     Вспомнил пароль
                   </Link>
                 </div>
@@ -174,7 +195,10 @@ const ForgotPassword = () => {
 
             {step === 'reset' && (
               <form onSubmit={handleResetPassword} className="space-y-3.5">
-                <div className="text-center mb-1">
+                <div className="text-center mb-3">
+                  <div className="inline-flex p-2.5 bg-orange-500/10 border border-orange-500/20 rounded-xl mb-2 text-orange-400">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
                   <p className="text-xs text-zinc-400">
                     Код отправлен на <br/>
                     <span className="text-white font-semibold">{email}</span>
@@ -182,7 +206,7 @@ const ForgotPassword = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Код</label>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Код из письма</label>
                   <div className="relative">
                     <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                     <input
@@ -190,7 +214,8 @@ const ForgotPassword = () => {
                       placeholder="000000"
                       value={code}
                       onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all text-center text-2xl tracking-[10px] font-mono"
+                      disabled={loading}
+                      className="w-full pl-10 pr-3.5 py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 text-center text-xl tracking-[6px] font-mono font-bold disabled:opacity-50 transition-all"
                       required
                       maxLength={6}
                       autoFocus
@@ -203,32 +228,48 @@ const ForgotPassword = () => {
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                     <input
-                      type="password"
-                      placeholder="минимум 6 символов"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Минимум 6 символов"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                      disabled={loading}
+                      className="w-full pl-10 pr-10 py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 disabled:opacity-50 transition-all"
                       required
                       minLength={6}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
                 <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={loading}
-                    className="w-full py-4 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer active:scale-[0.99]"
+                    disabled={loading || code.length !== 6 || newPassword.length < 6}
+                    className="w-full py-3.5 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer active:scale-[0.99]"
                   >
-                    {loading ? 'Сохранение...' : 'Сменить пароль'}
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Сохранение...
+                      </span>
+                    ) : (
+                      'Сменить пароль'
+                    )}
                   </button>
                 </div>
 
                 <div className="text-center pt-1">
                   <button
                     type="button"
-                    onClick={() => setStep('email')}
-                    className="text-zinc-500 hover:text-white text-[10px] transition-colors underline bg-transparent border-none cursor-pointer"
+                    onClick={handleBackToEmail}
+                    disabled={loading}
+                    className="text-zinc-500 hover:text-white text-xs transition-colors underline bg-transparent border-none cursor-pointer"
                   >
                     Изменить email
                   </button>

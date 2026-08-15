@@ -16,6 +16,7 @@ function App() {
     checkAuth();
   }, []);
 
+  // Блокируем рендеринг роутов, пока checkAuth не получит ответ от сервера
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -31,14 +32,29 @@ function App() {
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          {/* Авторизованных пользователей не пускаем на страницы входа/регистрации */}
+          <Route
+            path="/login"
+            element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/register"
+            element={!isAuthenticated ? <Register /> : <Navigate to="/" replace />}
+          />
           <Route path="/verify" element={<Verify />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/welcome" element={<Welcome />} />
+
+          {/* Главная страница (только для авторизованных) */}
           <Route
             path="/"
             element={isAuthenticated ? <Homepage /> : <Navigate to="/login" replace />}
+          />
+
+          {/* Редирект с несуществующих роутов */}
+          <Route
+            path="*"
+            element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />}
           />
         </Routes>
       </BrowserRouter>

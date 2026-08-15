@@ -12,13 +12,6 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: false
   },
-  nickname: {
-    type: String,
-    required: false,  // ✅ СДЕЛАЙ false
-    trim: true,
-    minlength: 2,
-    maxlength: 16
-  },
   username: {
     type: String,
     required: true,
@@ -29,20 +22,26 @@ const userSchema = new mongoose.Schema({
     maxlength: 16,
     match: /^[a-zA-Z0-9_.]+$/
   },
+  nickname: {
+    type: String,
+    required: false,
+    trim: true,
+    minlength: 2,
+    maxlength: 25
+  },
+  bio: {
+    type: String,
+    maxlength: 160,
+    default: ''
+  },
   gender: {
     type: String,
-    enum: ['male', 'female'],
-    required: false,  // ✅ СДЕЛАЙ false
+    enum: ['male', 'female', 'other'],
     default: 'male'
   },
   birthDate: {
     type: Date,
-    required: false  // ✅ СДЕЛАЙ false
-  },
-  age: {
-    type: Number,
-    min: 16,
-    max: 100
+    default: null
   },
   region: {
     type: String,
@@ -52,11 +51,15 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: 'https://ui-avatars.com/api/?background=667ea&color=fff&size=128'
   },
+
+  // Роли и доступ (без смешивания с подписками)
   role: {
     type: String,
-    enum: ['user', 'vip', 'premium', 'admin', 'owner'],
+    enum: ['user', 'moderator', 'admin', 'owner'],
     default: 'user'
   },
+
+  // Платная подписка
   subscription: {
     type: String,
     enum: ['FREE', 'PLUS', 'VIP', 'PREMIUM'],
@@ -66,9 +69,12 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+
+  // Внутренняя экономика и геймификация
   norCoins: {
     type: Number,
-    default: 200
+    default: 200,
+    min: 0
   },
   level: {
     type: Number,
@@ -78,19 +84,46 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
+  // Настройки приватности и отображения
   isPrivate: { type: Boolean, default: false },
   hideFollowers: { type: Boolean, default: false },
-  spacesCount: { type: Number, default: 0 },
+  hideOnlineStatus: { type: Boolean, default: false },
+  lastSeen: { type: Date, default: Date.now },
+
+  // Подтверждение и безопасность
   isVerified: { type: Boolean, default: false },
   verificationCode: { type: String, default: null },
+  verificationCodeExpires: { type: Date, default: null },
   googleId: { type: String, default: null, sparse: true, unique: true },
   resetPasswordCode: { type: String, default: null },
-  resetPasswordExpires: { type: Date, default: null }
-}, { timestamps: true });
+  resetPasswordExpires: { type: Date, default: null },
 
-userSchema.index({ resetPasswordCode: 1 });
+  // Модерация и блокировка
+  isBanned: { type: Boolean, default: false },
+  banReason: { type: String, default: null },
+  bannedUntil: { type: Date, default: null }
+
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Виртуальное поле для расчета возраста (не хранится в БД)
+userSchema.virtual('age').get(function () {
+  if (!this.birthDate) return null;
+  const today = new Date();
+  let age = today.getFullYear() - this.birthDate.getFullYear();
+  const m = today.getMonth() - this.birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < this.birthDate.getDate())) {
+    age--;
+  }
+  return age;
+});
+
+// Индексы
 userSchema.index({ region: 1 });
+userSchema.index({ isBanned: 1 });
 
 module.exports = mongoose.model('User', userSchema);

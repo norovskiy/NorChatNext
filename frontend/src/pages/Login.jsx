@@ -1,24 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
-import { Mail, Lock, Sparkles, AlertCircle, Loader2, ChevronRight } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Loader2, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { StarsBackground } from '../components/Background/StarsBackgroundDemo';
 import MiniMusicPlayer from '../components/Background/MiniMusicPlayer';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, login, googleAuth } = useAuthStore();
+  const { login, googleAuth } = useAuthStore();
 
   const [loading, setLoading] = useState(false);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (isAuthenticated) navigate('/', { replace: true });
-  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -40,9 +37,9 @@ const Login = () => {
       } else {
         setError(result?.message || 'Неверный email/username или пароль');
       }
-    } catch (err) {
+    } catch {
       setLoading(false);
-      setError('Сервер недоступен. Проверьте, запущен ли бэкенд на порту 5001');
+      setError('Сервер недоступен. Проверьте подключение к сети');
     }
   };
 
@@ -58,7 +55,7 @@ const Login = () => {
         } else {
           setError(result?.message || 'Ошибка Google авторизации');
         }
-      } catch (err) {
+      } catch {
         setLoading(false);
         setError('Ошибка при авторизации через Google');
       }
@@ -77,7 +74,7 @@ const Login = () => {
         starColor="#FFFFFF"
         factor={0.08}
         speed={0.8}
-        className="absolute inset-0 w-full h-full"
+        className="absolute inset-0 w-full h-full pointer-events-none"
       />
 
       <div className="absolute w-[360px] h-[360px] bg-orange-500/15 rounded-full blur-[130px] pointer-events-none -z-0" />
@@ -119,7 +116,8 @@ const Login = () => {
                     placeholder="email@example.com или username"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                    disabled={loading}
+                    className="w-full pl-10 pr-3.5 py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 disabled:opacity-50 transition-all"
                     required
                   />
                 </div>
@@ -130,13 +128,21 @@ const Login = () => {
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                    disabled={loading}
+                    className="w-full pl-10 pr-10 py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 disabled:opacity-50 transition-all"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
@@ -144,7 +150,7 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-4 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer active:scale-[0.99]"
+                  className="w-full py-3.5 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer active:scale-[0.99]"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -167,7 +173,7 @@ const Login = () => {
                 type="button"
                 onClick={() => googleLogin()}
                 disabled={loading}
-                className="w-full py-3.5 bg-[#141418] border border-zinc-800 hover:border-zinc-600 text-white font-medium text-xs rounded-xl transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+                className="w-full py-3 bg-[#141418] border border-zinc-800 hover:border-zinc-600 text-white font-medium text-xs rounded-xl transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24">
                   <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.4 1.7 14.9 1 12 1 7.7 1 4 3.5 2.2 7.1l3.7 2.8C6.8 7.3 9.2 5 12 5z"/>

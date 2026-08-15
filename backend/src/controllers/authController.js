@@ -16,8 +16,7 @@ const sendMailSafe = async ({ to, subject, html }) => {
   try {
     await transporter.sendMail({ from: process.env.EMAIL_USER, to, subject, html });
     return true;
-  } catch (error) {
-    console.error('❌ Email error:', error.message);
+  } catch {
     return false;
   }
 };
@@ -59,14 +58,9 @@ const codeEmailHtml = (code) => `
   </div>
 `;
 
-// ========== 1. РЕГИСТРАЦИЯ (ОТПРАВКА КОДА) ==========
 const register = async (req, res) => {
   try {
     const { email, username, password, gender, nickname, birthDate, region } = req.body;
-
-    console.log('\n========== REGISTER ==========');
-    console.log('📝 Email:', email);
-    console.log('📝 Username:', username);
 
     if (!email || !username || !password) {
       return res.status(400).json({ success: false, message: 'Email, username and password are required' });
@@ -79,12 +73,8 @@ const register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid email format' });
     }
 
-    if (normalizedUsername.length < 3) {
-      return res.status(400).json({ success: false, message: 'Username must be at least 3 characters' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    if (normalizedUsername.length < 3 || password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Validation failed for username or password length' });
     }
 
     const existingUser = await User.findOne({
@@ -102,36 +92,26 @@ const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-    let user;
+    const userData = {
+      email: normalizedEmail,
+      username: normalizedUsername,
+      password: hashedPassword,
+      nickname: nickname || normalizedUsername,
+      gender: gender || 'male',
+      birthDate: birthDate || null,
+      region: region || 'International',
+      verificationCode,
+      verificationCodeExpires,
+      isVerified: false
+    };
 
     if (existingUser && !existingUser.isVerified) {
-      existingUser.username = normalizedUsername;
-      existingUser.password = hashedPassword;
-      existingUser.nickname = nickname || normalizedUsername;
-      existingUser.gender = gender || 'male';
-      existingUser.birthDate = birthDate || null;
-      existingUser.region = region || 'International';
-      existingUser.verificationCode = verificationCode;
-      
-      user = await existingUser.save();
-      console.log('🔄 Неподтвержденный пользователь обновлен:', normalizedEmail);
+      await User.updateOne({ _id: existingUser._id }, { $set: userData });
     } else {
-      user = await User.create({
-        email: normalizedEmail,
-        username: normalizedUsername,
-        password: hashedPassword,
-        nickname: nickname || normalizedUsername,
-        gender: gender || 'male',
-        birthDate: birthDate || null,
-        region: region || 'International',
-        verificationCode: verificationCode,
-        isVerified: false
-      });
-      console.log('✅ Новый неподтвержденный пользователь создан:', normalizedEmail);
+      await User.create(userData);
     }
-
-    console.log('🔑 Verification code:', verificationCode);
 
     const emailSent = await sendMailSafe({
       to: normalizedEmail,
@@ -146,19 +126,13 @@ const register = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Register error:', error);
     res.status(500).json({ success: false, message: 'Registration failed' });
   }
 };
 
-// ========== 2. ПРОВЕРКА КОДА РЕГИСТРАЦИИ ==========
 const verifyRegistrationCode = async (req, res) => {
   try {
     const { email, code } = req.body;
-
-    console.log('\n========== VERIFY CODE ==========');
-    console.log('📝 Email:', email);
-    console.log('🔑 Code:', code);
 
     if (!email || !code) {
       return res.status(400).json({ success: false, message: 'Email and code are required' });
@@ -166,19 +140,18 @@ const verifyRegistrationCode = async (req, res) => {
 
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
-      verificationCode: code.trim()
+      verificationCode: code.trim(),
+      verificationCodeExpires: { $gt: new Date() }
     });
 
     if (!user) {
-      console.log('❌ Invalid code');
-      return res.status(400).json({ success: false, message: 'Неверный код подтверждения' });
+      return res.status(400).json({ success: false, message: 'Неверный или истекший код подтверждения' });
     }
 
     user.verificationCode = null;
+    user.verificationCodeExpires = null;
     user.isVerified = true;
     await user.save();
-
-    console.log('✅ Email verified successfully');
 
     const token = generateToken(user._id);
 
@@ -189,30 +162,24 @@ const verifyRegistrationCode = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Verify code error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Verification failed' });
   }
 };
 
-// ========== 3. ЛОГИН ==========
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    console.log('\n========== LOGIN ==========');
-    console.log('📝 Identifier:', email);
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email/username and password are required' });
     }
 
     const identifier = email.trim().toLowerCase();
-
     const user = await User.findOne({
       $or: [{ email: identifier }, { username: identifier }]
     });
 
-    if (!user) {
+    if (!user || !(await bcrypt.compare(password, user.password || ''))) {
       return res.status(401).json({ success: false, message: 'Invalid email/username or password' });
     }
 
@@ -223,54 +190,71 @@ const login = async (req, res) => {
       });
     }
 
-    if (!user.password) {
-      return res.status(401).json({ success: false, message: 'This account uses Google login. Please use "Login with Google".' });
-    }
-
-    const passwordMatches = await bcrypt.compare(password, user.password);
-
-    if (!passwordMatches) {
-      return res.status(401).json({ success: false, message: 'Invalid email/username or password' });
-    }
-
     const token = generateToken(user._id);
-
     res.json({ success: true, token, user: publicUser(user) });
   } catch (error) {
-    console.error('❌ Login error:', error);
     res.status(500).json({ success: false, message: 'Login failed' });
   }
 };
 
-// ========== 4. GOOGLE AUTH ==========
 const googleAuth = async (req, res) => {
   try {
-    const { idToken } = req.body;
+    // 1. Извлекаем токен из любого возможного поля
+    const rawToken = req.body.idToken || req.body.credential || req.body.token || req.body.googleToken || req.body.accessToken;
 
-    if (!idToken) {
-      return res.status(400).json({ success: false, message: 'Google token is required' });
+    if (!rawToken) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Google token is required' 
+      });
     }
 
-    const googleResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${idToken}` }
-    });
+    let email, name, picture, googleId;
 
-    if (!googleResponse.ok) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired Google token' });
+    // 2. Вариант А: Если токен похоже на ID Token (JWT начинается с eyJ...)
+    if (typeof rawToken === 'string' && rawToken.startsWith('eyJ')) {
+      const idTokenRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${rawToken}`);
+      if (idTokenRes.ok) {
+        const data = await idTokenRes.json();
+        email = data.email;
+        name = data.name;
+        picture = data.picture;
+        googleId = data.sub;
+      }
     }
 
-    const googleUser = await googleResponse.json();
-    const { email, name, picture, sub: googleId } = googleUser;
-
+    // 3. Вариант Б: Если это Access Token (ya29...) или ID Token проверка не прошла
     if (!email) {
-      return res.status(400).json({ success: false, message: 'Google account has no email' });
+      const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${rawToken}` }
+      });
+
+      if (userInfoRes.ok) {
+        const data = await userInfoRes.json();
+        email = data.email;
+        name = data.name;
+        picture = data.picture;
+        googleId = data.sub;
+      } else {
+        const errText = await userInfoRes.text();
+        console.error('❌ Google Token Check Failed:', errText);
+      }
     }
 
+    // 4. Если ни один из эндпоинтов Google не подтвердил токен
+    if (!email) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid or expired Google token' 
+      });
+    }
+
+    // 5. Поиск или создание пользователя в БД
     const normalizedEmail = email.toLowerCase();
     let user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
-      const username = normalizedEmail.split('@')[0] + '_' + Math.floor(Math.random() * 10000);
+      const username = normalizedEmail.split('@')[0] + '_' + Math.floor(1000 + Math.random() * 9000);
       user = await User.create({
         email: normalizedEmail,
         username,
@@ -287,26 +271,33 @@ const googleAuth = async (req, res) => {
       await User.updateOne({ _id: user._id }, { $set: { googleId } });
     }
 
+    // 6. Выдача JWT токена NorChat
     const token = generateToken(user._id);
-    res.json({ success: true, token, user: publicUser(user) });
+    
+    return res.json({ 
+      success: true, 
+      token, 
+      user: publicUser(user) 
+    });
+
   } catch (error) {
-    console.error('Google auth error:', error);
-    res.status(500).json({ success: false, message: 'Google authentication failed' });
+    console.error('❌ Google Auth Internal Error:', error.message);
+    return res.status(500).json({ success: false, message: 'Google authentication failed' });
   }
 };
 
-// ========== 5. GET ME ==========
 const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    res.json({ success: true, user: publicUser(user) });
+    // Пользователь уже проверен и прикреплен к req.user в middleware
+    res.json({
+      success: true,
+      user: req.user,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to fetch user' });
+    res.status(500).json({ success: false, message: 'Ошибка сервера' });
   }
 };
 
-// ========== 6. UPDATE PROFILE ==========
 const updateProfile = async (req, res) => {
   try {
     const { nickname, birthDate, region } = req.body;
@@ -351,12 +342,10 @@ const updateProfile = async (req, res) => {
 
     res.json({ success: true, user: publicUser(user) });
   } catch (error) {
-    console.error('Update profile error:', error);
     res.status(500).json({ success: false, message: 'Profile update failed' });
   }
 };
 
-// ========== 7. ЗАБЫЛИ ПАРОЛЬ ==========
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -390,22 +379,16 @@ const forgotPassword = async (req, res) => {
       ...(process.env.NODE_ENV !== 'production' && code && { devCode: code, emailSent })
     });
   } catch (error) {
-    console.error('Forgot password error:', error);
     res.status(500).json({ success: false, message: 'Failed to process request' });
   }
 };
 
-// ========== 8. СБРОС ПАРОЛЯ ==========
 const resetPassword = async (req, res) => {
   try {
     const { email, code, newPassword } = req.body;
 
-    if (!email || !code || !newPassword) {
-      return res.status(400).json({ success: false, message: 'All fields are required' });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    if (!email || !code || !newPassword || newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Invalid data or password too short' });
     }
 
     const user = await User.findOne({
@@ -420,13 +403,12 @@ const resetPassword = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Меняем пароль, подтверждаем аккаунт и очищаем одноразовый код
     await User.updateOne(
       { _id: user._id },
       { 
         $set: { 
           password: hashedPassword, 
-          isVerified: true, // 👈 Теперь аккаунт автоматически становится подтверждённым!
+          isVerified: true,
           resetPasswordCode: null, 
           resetPasswordExpires: null 
         } 
@@ -435,12 +417,10 @@ const resetPassword = async (req, res) => {
 
     res.json({ success: true, message: 'Password reset successfully' });
   } catch (error) {
-    console.error('Reset password error:', error);
     res.status(500).json({ success: false, message: 'Failed to reset password' });
   }
 };
 
-// ВСЕ ФУНКЦИИ В ЭКСПОРТЕ:
 module.exports = {
   register,
   verifyRegistrationCode,

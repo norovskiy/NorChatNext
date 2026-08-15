@@ -10,7 +10,9 @@ import {
   AlertCircle, 
   Loader2, 
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { StarsBackground } from '../components/Background/StarsBackgroundDemo';
@@ -25,6 +27,7 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [birthDate, setBirthDate] = useState('');
   const [gender, setGender] = useState('male');
   const [code, setCode] = useState('');
@@ -95,13 +98,12 @@ const Register = () => {
       } else {
         setError(result?.message || 'Ошибка регистрации');
       }
-    } catch (err) {
+    } catch {
       setLoading(false);
       setError('Произошла ошибка при регистрации');
     }
   };
 
-  // ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ==========
   const handleVerify = async (e) => {
     e.preventDefault();
     setError('');
@@ -115,7 +117,6 @@ const Register = () => {
     setLoading(true);
 
     try {
-      // ✅ ИСПРАВЛЕНО: verifyCode, а НЕ register!
       const result = await verifyCode(email, code);
       setLoading(false);
 
@@ -125,7 +126,7 @@ const Register = () => {
       } else {
         setError(result?.message || 'Неверный код подтверждения');
       }
-    } catch (err) {
+    } catch {
       setLoading(false);
       setError('Ошибка при проверке кода');
     }
@@ -137,7 +138,7 @@ const Register = () => {
         starColor="#FFFFFF"
         factor={0.08}
         speed={0.8}
-        className="absolute inset-0 w-full h-full"
+        className="absolute inset-0 w-full h-full pointer-events-none"
       />
 
       <div className="absolute w-[360px] h-[360px] bg-orange-500/15 rounded-full blur-[130px] pointer-events-none -z-0" />
@@ -186,7 +187,8 @@ const Register = () => {
                       placeholder="your@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                      disabled={loading}
+                      className="w-full pl-10 pr-3.5 py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 disabled:opacity-50 transition-all"
                       required
                     />
                   </div>
@@ -201,7 +203,8 @@ const Register = () => {
                       placeholder="alex_nor"
                       value={username}
                       onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
-                      className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                      disabled={loading}
+                      className="w-full pl-10 pr-3.5 py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 disabled:opacity-50 transition-all"
                       required
                       minLength={3}
                       maxLength={16}
@@ -214,14 +217,22 @@ const Register = () => {
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                     <input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                      disabled={loading}
+                      className="w-full pl-10 pr-10 py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 disabled:opacity-50 transition-all"
                       required
                       minLength={6}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -234,7 +245,8 @@ const Register = () => {
                         type="date"
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
-                        className="w-full pl-9 pr-2 py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 transition-all [color-scheme:dark]"
+                        disabled={loading}
+                        className="w-full pl-9 pr-2 py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 disabled:opacity-50 transition-all [color-scheme:dark]"
                         required
                       />
                     </div>
@@ -246,7 +258,8 @@ const Register = () => {
                       <button
                         type="button"
                         onClick={() => setGender('male')}
-                        className={`relative flex-1 py-3.5 text-xs font-bold rounded-lg transition-colors cursor-pointer z-10 ${
+                        disabled={loading}
+                        className={`relative flex-1 py-2.5 text-xs font-bold rounded-lg transition-colors cursor-pointer z-10 ${
                           gender === 'male' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
                         }`}
                       >
@@ -262,7 +275,8 @@ const Register = () => {
                       <button
                         type="button"
                         onClick={() => setGender('female')}
-                        className={`relative flex-1 py-3.5 text-xs font-bold rounded-lg transition-colors cursor-pointer z-10 ${
+                        disabled={loading}
+                        className={`relative flex-1 py-2.5 text-xs font-bold rounded-lg transition-colors cursor-pointer z-10 ${
                           gender === 'female' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
                         }`}
                       >
@@ -283,7 +297,7 @@ const Register = () => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-4 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer active:scale-[0.99]"
+                    className="w-full py-3.5 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer active:scale-[0.99]"
                   >
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
@@ -326,7 +340,8 @@ const Register = () => {
                   placeholder="000000"
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full py-4 bg-[#141418] border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 text-center text-2xl tracking-[10px] font-mono font-bold"
+                  disabled={loading}
+                  className="w-full py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 text-center text-2xl tracking-[10px] font-mono font-bold disabled:opacity-50"
                   required
                   maxLength={6}
                   autoFocus
@@ -335,7 +350,7 @@ const Register = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer"
+                  className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer"
                 >
                   {loading ? 'Проверка...' : 'Подтвердить код'}
                 </button>
@@ -343,7 +358,11 @@ const Register = () => {
                 <div className="text-center pt-1">
                   <button
                     type="button"
-                    onClick={() => setStep('register')}
+                    onClick={() => {
+                      setStep('register');
+                      setError('');
+                      setSuccess('');
+                    }}
                     className="text-xs text-zinc-500 hover:text-white transition-colors underline bg-transparent border-none cursor-pointer"
                   >
                     Назад к регистрации

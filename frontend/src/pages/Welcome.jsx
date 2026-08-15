@@ -9,7 +9,6 @@ import {
   ChevronRight, 
   ChevronLeft, 
   Zap, 
-  Music, 
   Lock,
   ArrowRight,
   Radio,
@@ -29,7 +28,11 @@ import { StarsBackground } from '../components/Background/StarsBackgroundDemo';
 
 const RadixCheckboxDemo = ({ checked, onCheckedChange, label }) => {
   return (
-    <label className="flex items-center gap-x-3 cursor-pointer group select-none">
+    <label 
+      className="flex items-center gap-x-3 cursor-pointer group select-none"
+      role="checkbox"
+      aria-checked={checked}
+    >
       <div className="relative">
         <input
           type="checkbox"
@@ -87,7 +90,7 @@ const MusicPreviewCard = () => {
   const startAudio = (trackIndex) => {
     stopAudio();
     try {
-      if (!audioCtxRef.current) {
+      if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
         audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
       }
       const ctx = audioCtxRef.current;
@@ -131,17 +134,16 @@ const MusicPreviewCard = () => {
   const handleSelectTrack = (idx) => {
     setActiveTrack(idx);
     setShowPlaylist(false);
-    if (isPlaying) {
-      startAudio(idx);
-    } else {
-      startAudio(idx);
-      setIsPlaying(true);
-    }
+    startAudio(idx);
+    setIsPlaying(true);
   };
 
   useEffect(() => {
     return () => {
       stopAudio();
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+        audioCtxRef.current.close();
+      }
     };
   }, []);
 
@@ -450,12 +452,12 @@ const Welcome = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#060608] text-white flex items-center justify-center p-4">
+    <div className="relative min-h-screen overflow-hidden bg-[#060608] text-white flex items-center justify-center p-4 select-none">
       <StarsBackground 
         starColor="#FFFFFF"
         factor={0.08}
         speed={0.8}
-        className="absolute inset-0 w-full h-full opacity-60"
+        className="absolute inset-0 w-full h-full opacity-60 pointer-events-none"
       />
 
       <div className="absolute w-[450px] h-[450px] bg-orange-500/15 rounded-full blur-[140px] pointer-events-none -z-0" />
@@ -512,7 +514,6 @@ const Welcome = () => {
             </AnimatePresence>
 
             <div className="pt-6 flex items-center justify-between border-t border-zinc-800/80 mt-4">
-              
               <div className="flex items-center gap-1.5">
                 {SLIDES.map((_, idx) => (
                   <button
@@ -552,7 +553,6 @@ const Welcome = () => {
                   )}
                 </button>
               </div>
-
             </div>
           </div>
 
@@ -587,7 +587,6 @@ const Welcome = () => {
               </div>
 
               <div className="h-64 sm:h-72 overflow-y-auto pr-3 space-y-4 text-xs text-zinc-400 scrollbar-thin scrollbar-thumb-orange-500/20 scrollbar-track-transparent">
-                
                 <div className="p-3 bg-orange-500/5 border border-orange-500/20 rounded-2xl text-zinc-300 space-y-1">
                   <div className="font-bold text-white text-xs flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-orange-400" />
@@ -666,7 +665,6 @@ const Welcome = () => {
                     Использование NorChat разрешено строго лицам, достигшим 16 лет. Нажимая кнопку продолжения, вы подтверждаете соблюдение всех условий.
                   </p>
                 </div>
-
               </div>
 
               <div className="mt-5 pt-4 border-t border-zinc-800/80 space-y-4">
@@ -689,12 +687,10 @@ const Welcome = () => {
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
-
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-
     </div>
   );
 };
