@@ -8,6 +8,7 @@ import Verify from './pages/Verify';
 import Welcome from './pages/Welcome';
 import Homepage from './pages/Homepage';
 import useAuthStore from './store/useAuthStore';
+import Profile from './pages/Profile';
 
 function App() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
@@ -42,6 +43,7 @@ function App() {
           <Route path="/verify" element={<Verify />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/welcome" element={<Welcome />} />
+          <Route path="/profile" element={<Profile/>} />
 
           <Route
             path="/"

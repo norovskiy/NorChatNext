@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 
+const frameSchema = new mongoose.Schema({
+  frameId: { type: String, required: true },
+  name: { type: String, required: true },
+  borderClass: { type: String, required: true },
+  animationClass: { type: String, default: '' },
+  isAnimated: { type: Boolean, default: false }
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -10,7 +18,8 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: false
+    required: false,
+    select: false // Безопасность: не возвращать хэш пароля в обычных запросах
   },
   username: {
     type: String,
@@ -47,12 +56,46 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: 'International'
   },
+
+  // Аватарка, Анимация и Модерация
   avatar: {
     type: String,
     default: 'https://ui-avatars.com/api/?background=667ea&color=fff&size=128'
   },
+  isAnimatedAvatar: {
+    type: Boolean,
+    default: false
+  },
+  avatarStatus: {
+    type: String,
+    enum: ['approved', 'pending_review', 'rejected'],
+    default: 'approved'
+  },
 
-  // Роли и доступ (без смешивания с подписками)
+  // Активная рамка профиля
+  equippedFrame: {
+    type: frameSchema,
+    default: () => ({
+      frameId: 'frame_default_orange',
+      name: 'NorChat Flame',
+      borderClass: 'border-2 border-orange-500 shadow-[0_0_18px_rgba(249,115,22,0.6)]',
+      animationClass: 'animate-pulse',
+      isAnimated: true
+    })
+  },
+
+  // Инвентарь пользователя (Рамки, темы, значки)
+  inventory: {
+    frames: [
+      {
+        frameId: { type: String, required: true },
+        acquiredAt: { type: Date, default: Date.now },
+        source: { type: String, default: 'default' }
+      }
+    ]
+  },
+
+  // Роли и доступ
   role: {
     type: String,
     enum: ['user', 'moderator', 'admin', 'owner'],
@@ -93,10 +136,10 @@ const userSchema = new mongoose.Schema({
 
   // Подтверждение и безопасность
   isVerified: { type: Boolean, default: false },
-  verificationCode: { type: String, default: null },
+  verificationCode: { type: String, default: null, select: false },
   verificationCodeExpires: { type: Date, default: null },
   googleId: { type: String, default: null, sparse: true, unique: true },
-  resetPasswordCode: { type: String, default: null },
+  resetPasswordCode: { type: String, default: null, select: false },
   resetPasswordExpires: { type: Date, default: null },
 
   // Модерация и блокировка
@@ -110,7 +153,7 @@ const userSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Виртуальное поле для расчета возраста (не хранится в БД)
+// Виртуальное поле для расчета возраста
 userSchema.virtual('age').get(function () {
   if (!this.birthDate) return null;
   const today = new Date();
@@ -122,8 +165,9 @@ userSchema.virtual('age').get(function () {
   return age;
 });
 
-// Индексы
+// Индексы для быстрой выборки
 userSchema.index({ region: 1 });
 userSchema.index({ isBanned: 1 });
+userSchema.index({ username: 1 });
 
 module.exports = mongoose.model('User', userSchema);

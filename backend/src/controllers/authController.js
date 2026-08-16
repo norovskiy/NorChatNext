@@ -26,23 +26,33 @@ const sendMailSafe = async ({ to, subject, html }) => {
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-// Криптографически стойкая генерация 6-значного кода
 const generateSecureCode = () => crypto.randomInt(100000, 1000000).toString();
+
+const safeCompareCodes = (a, b) => {
+  if (!a || !b || a.length !== b.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+};
 
 const publicUser = (user) => ({
   id: user._id,
   email: user.email,
-  nickname: user.nickname,
   username: user.username,
+  nickname: user.nickname,
+  bio: user.bio,
   gender: user.gender,
   region: user.region,
   age: user.age,
   birthDate: user.birthDate,
-  norCoins: user.norCoins,
+  avatar: user.avatar,
+  isAnimatedAvatar: user.isAnimatedAvatar,
+  equippedFrame: user.equippedFrame,
+  inventory: user.inventory,
+  role: user.role,
   subscription: user.subscription,
+  norCoins: user.norCoins,
   level: user.level,
   xp: user.xp,
-  avatar: user.avatar
+  isVerified: user.isVerified
 });
 
 const codeEmailHtml = (code) => `
@@ -97,8 +107,7 @@ const register = async (req, res) => {
         });
       }
       
-      // Защита: Если запись существует, но не подтверждена и код еще не истек — не даем перезаписать чужой аккаунт
-      if (existingUser.verificationCodeExpires > new Date()) {
+      if (existingUser.verificationCodeExpires && existingUser.verificationCodeExpires > new Date()) {
         return res.status(400).json({
           success: false,
           message: 'Код подтверждения уже отправлен. Дождитесь истечения 10 минут перед повторной попыткой.'
@@ -120,7 +129,7 @@ const register = async (req, res) => {
       region: region || 'International',
       verificationCode,
       verificationCodeExpires,
-      verificationAttempts: 0, // Инициализация счетчика попыток
+      verificationAttempts: 0,
       isVerified: false
     };
 
@@ -157,18 +166,17 @@ const verifyRegistrationCode = async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail, isVerified: false });
+    const user = await User.findOne({ email: normalizedEmail, isVerified: false })
+      .select('+verificationCode +verificationCodeExpires');
 
     if (!user || !user.verificationCode || !user.verificationCodeExpires) {
       return res.status(400).json({ success: false, message: 'Запрос на подтверждение не найден или уже выполнен' });
     }
 
-    // Проверка срока действия кода
     if (user.verificationCodeExpires < new Date()) {
       return res.status(400).json({ success: false, message: 'Срок действия кода истек. Зарегистрируйтесь снова.' });
     }
 
-    // Защита от брутфорса: сброс кода после 5 неверных попыток
     if ((user.verificationAttempts || 0) >= 5) {
       await User.updateOne(
         { _id: user._id },
@@ -177,7 +185,7 @@ const verifyRegistrationCode = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Превышено количество попыток. Запросите код заново.' });
     }
 
-    if (user.verificationCode !== code.trim()) {
+    if (!safeCompareCodes(user.verificationCode, code.trim())) {
       await User.updateOne({ _id: user._id }, { $inc: { verificationAttempts: 1 } });
       return res.status(400).json({ success: false, message: 'Неверный код подтверждения' });
     }
@@ -213,7 +221,7 @@ const login = async (req, res) => {
     const identifier = email.trim().toLowerCase();
     const user = await User.findOne({
       $or: [{ email: identifier }, { username: identifier }]
-    });
+    }).select('+password');
 
     if (!user || !(await bcrypt.compare(password, user.password || ''))) {
       return res.status(401).json({ success: false, message: 'Неверный логин или пароль' });
@@ -274,7 +282,6 @@ const googleAuth = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Недействительный токен Google' });
     }
 
-    // Защита от подмены Client ID
     if (audience && process.env.GOOGLE_CLIENT_ID && audience !== process.env.GOOGLE_CLIENT_ID) {
       return res.status(401).json({ success: false, message: 'Токен предназначен для другого приложения' });
     }
@@ -283,7 +290,6 @@ const googleAuth = async (req, res) => {
     let user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
-      // Безопасная генерация уникального username
       let baseUsername = normalizedEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
       if (baseUsername.length < 3) baseUsername = 'user_' + baseUsername;
       
@@ -322,7 +328,9 @@ const googleAuth = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
-    res.json({ success: true, user: req.user });
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'Пользователь не найден' });
+    res.json({ success: true, user: publicUser(user) });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Ошибка сервера' });
   }
@@ -330,7 +338,7 @@ const getMe = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { nickname, birthDate, region } = req.body;
+    const { nickname, birthDate, region, bio, avatar, isAnimatedAvatar } = req.body;
     const update = {};
 
     if (nickname !== undefined) {
@@ -340,7 +348,17 @@ const updateProfile = async (req, res) => {
       update.nickname = nickname.trim();
     }
 
-    if (birthDate !== undefined) {
+    if (bio !== undefined) {
+      if (bio.length > 160) {
+        return res.status(400).json({ success: false, message: 'Bio не может превышать 160 символов' });
+      }
+      update.bio = bio.trim();
+    }
+
+    if (avatar !== undefined) update.avatar = avatar;
+    if (isAnimatedAvatar !== undefined) update.isAnimatedAvatar = isAnimatedAvatar;
+
+    if (birthDate !== undefined && birthDate !== null) {
       const parsed = new Date(birthDate);
       if (Number.isNaN(parsed.getTime()) || parsed > new Date()) {
         return res.status(400).json({ success: false, message: 'Некорректная дата рождения' });
@@ -358,7 +376,6 @@ const updateProfile = async (req, res) => {
       }
 
       update.birthDate = parsed;
-      update.age = age;
     }
 
     if (region !== undefined) update.region = region;
@@ -366,13 +383,44 @@ const updateProfile = async (req, res) => {
     const user = await User.findByIdAndUpdate(req.user.id, update, {
       new: true,
       runValidators: true
-    }).select('-password');
+    });
 
     if (!user) return res.status(404).json({ success: false, message: 'Пользователь не найден' });
 
     res.json({ success: true, user: publicUser(user) });
   } catch (error) {
+    console.error('Update Profile Error:', error);
     res.status(500).json({ success: false, message: 'Ошибка обновления профиля' });
+  }
+};
+
+const equipFrame = async (req, res) => {
+  try {
+    const { frameId, name, borderClass, animationClass, isAnimated } = req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Пользователь не найден' });
+    }
+
+    user.equippedFrame = {
+      frameId,
+      name,
+      borderClass,
+      animationClass: animationClass || '',
+      isAnimated: !!isAnimated
+    };
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Рамка успешно установлена',
+      user: publicUser(user)
+    });
+  } catch (error) {
+    console.error('Equip Frame Error:', error);
+    res.status(500).json({ success: false, message: 'Ошибка при установке рамки' });
   }
 };
 
@@ -398,7 +446,7 @@ const forgotPassword = async (req, res) => {
           $set: { 
             resetPasswordCode: code, 
             resetPasswordExpires: new Date(Date.now() + 10 * 60 * 1000),
-            resetPasswordAttempts: 0 // Сброс счетчика попыток
+            resetPasswordAttempts: 0 
           } 
         }
       );
@@ -409,7 +457,6 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // Унифицированный ответ для предотвращения утечки существующих email
     res.json({
       success: true,
       message: 'Если аккаунт с таким email существует, код отправлен на почту',
@@ -429,7 +476,8 @@ const resetPassword = async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await User.findOne({ email: normalizedEmail })
+      .select('+resetPasswordCode +resetPasswordExpires');
 
     if (!user || !user.resetPasswordCode || !user.resetPasswordExpires) {
       return res.status(400).json({ success: false, message: 'Запрос на сброс пароля не найден или недействителен' });
@@ -439,7 +487,6 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Срок действия кода истек' });
     }
 
-    // Защита от брутфорса: сброс кода после 5 неудачных попыток
     if ((user.resetPasswordAttempts || 0) >= 5) {
       await User.updateOne(
         { _id: user._id },
@@ -448,7 +495,7 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Превышено количество попыток. Запросите сброс пароля заново.' });
     }
 
-    if (user.resetPasswordCode !== code.trim()) {
+    if (!safeCompareCodes(user.resetPasswordCode, code.trim())) {
       await User.updateOne({ _id: user._id }, { $inc: { resetPasswordAttempts: 1 } });
       return res.status(400).json({ success: false, message: 'Неверный код восстановления' });
     }
@@ -482,6 +529,7 @@ module.exports = {
   googleAuth,
   getMe,
   updateProfile,
+  equipFrame,
   forgotPassword,
   resetPassword
 };

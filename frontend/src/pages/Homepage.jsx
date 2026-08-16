@@ -1,22 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, Users, MessageSquare, Sparkles, Zap, Rocket } from 'lucide-react';
-import useAuthStore from '../store/useAuthStore';
+import { Users, MessageSquare, Rocket } from 'lucide-react';
+import useAuthStore from '../store/useAuthstore';
 import { StarsBackground } from '../components/Background/StarsBackgroundDemo';
+import Header from '../components/Common/Header'; // Импортируем наш собственный Header
 
 const Homepage = () => {
-  const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
 
   const [showAnimation, setShowAnimation] = useState(() => {
     const saved = localStorage.getItem('norchat_bg_animation');
     return saved !== null ? saved === 'true' : true;
   });
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   const toggleBackground = () => {
     setShowAnimation((prev) => {
@@ -42,44 +36,8 @@ const Homepage = () => {
       <div className="absolute w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-[150px] pointer-events-none -z-0" />
 
       <div className="relative z-10 flex flex-col flex-1">
-        <header className="border-b border-zinc-800/90 px-4 sm:px-6 lg:px-8 py-3.5 bg-[#060608]/80 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 className="text-xl font-black tracking-tight">
-              <span className="text-white">Nor</span>
-              <span className="text-orange-500 drop-shadow-[0_0_12px_rgba(249,115,22,0.4)]">Chat</span>
-            </h1>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={toggleBackground}
-                className="px-3 py-1.5 text-[11px] bg-zinc-800/50 border border-zinc-700/50 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700/50 transition-all flex items-center gap-1.5"
-              >
-                {showAnimation ? (
-                  <>
-                    <Zap size={13} className="text-orange-400" />
-                    Фон вкл
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={13} className="text-zinc-400" />
-                    Фон выкл
-                  </>
-                )}
-              </button>
-
-              <div className="flex items-center gap-2.5">
-                <span className="text-zinc-400 text-xs font-medium">{displayName}</span>
-                <button
-                  onClick={handleLogout}
-                  className="px-3.5 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[11px] hover:bg-red-500/20 transition-all flex items-center gap-1.5"
-                >
-                  <LogOut size={13} />
-                  Выйти
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
+        {/* Вызываем наш единый Header */}
+        <Header showAnimation={showAnimation} toggleBackground={toggleBackground} />
 
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
           <div className="max-w-7xl mx-auto">

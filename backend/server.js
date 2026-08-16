@@ -3,6 +3,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const authRoutes = require('./src/routes/authRoutes');
@@ -12,10 +14,25 @@ const socketHandler = require('./src/socket/socketHandler');
 const app = express();
 const server = http.createServer(app);
 
-// 🔑 Доверяем первому прокси (Render, Heroku, Nginx, Cloudflare)
-// Необходима для корректной работы express-rate-limit и определения IP
+// 🔑 Доверяем прокси (Render, Heroku, Cloudflare)
 app.set('trust proxy', 1);
 
+// 🛡️ Безопасность HTTP-заголовков
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// 🛡️ Глобальный Rate Limiter (Защита от DDoS)
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 минут
+  max: 1000, // максимум 1000 запросов с одного IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Слишком много запросов с вашего IP, попробуйте позже.' }
+});
+app.use(globalLimiter);
+
+// CORS Настройка
 const corsOptions = {
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
@@ -23,12 +40,16 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
+
+// 📦 Парсинг JSON с увеличенным лимитом для загрузки фото/аватарок
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // HTTP Роуты
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
+// Проверка здоровья сервера
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -38,7 +59,7 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ message: 'NorChat API', version: '1.0.0', status: 'running' });
+  res.json({ message: 'NorChat API v2.0', status: 'running' });
 });
 
 // Инициализация Socket.IO
@@ -53,12 +74,12 @@ socketHandler(io);
 
 // 404 & Error Handlers
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ error: 'Маршрут не найден' });
 });
 
 app.use((err, req, res, next) => {
   console.error('Unhandled server error:', err.stack);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({ error: 'Внутренняя ошибка сервера' });
 });
 
 // Подключение к MongoDB
@@ -75,7 +96,7 @@ mongoose.connect(MONGODB_URI)
     process.exit(1);
   });
 
-// Self-ping для предотвращения гибернации
+// Self-ping для предотвращения гибернации Render
 if (process.env.SELF_PING_URL) {
   setInterval(async () => {
     try {
@@ -89,7 +110,7 @@ const runningServer = server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
 
-// Безопасное завершение работы (Graceful Shutdown)
+// Graceful Shutdown
 const shutdown = async () => {
   console.log('⏳ Shutting down server...');
   runningServer.close(async () => {
