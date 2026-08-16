@@ -10,17 +10,39 @@ const protect = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
 
-    const user = await User.findById(decoded.id || decoded.userId)
-      .select('-password')
-      .lean();
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Пользователь не найден' });
+    // 1. Разделяем ошибки валидации JWT и ошибки сервера/БД
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      return res.status(401).json({ success: false, message: 'Недействительный или просроченный токен' });
     }
 
-    // 🔑 Нормализуем id, чтобы везде в контроллерах были доступны и ._id, и .id
+    const user = await User.findById(decoded.id || decoded.userId)
+      .select('-password -verificationCode -resetPasswordCode')
+      .lean();
+
+    // 2. Если пользователя нет в БД, это ошибка авторизации (401), а не 404
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Пользователь не найден или был удален' });
+    }
+
+    // 3. Проверка блокировки аккаунта (isBanned)
+    if (user.isBanned) {
+      // Если бан временный и срок вышел — пропускаем
+      if (user.bannedUntil && new Date(user.bannedUntil) < new Date()) {
+        // Можно автоматически снять бан в БД асинхронно
+        User.findByIdAndUpdate(user._id, { isBanned: false, banReason: null, bannedUntil: null }).exec();
+      } else {
+        return res.status(403).json({
+          success: false,
+          message: `Аккаунт заблокирован. Причина: ${user.banReason || 'Не указана'}`
+        });
+      }
+    }
+
+    // 4. Нормализуем id
     req.user = {
       ...user,
       id: user._id.toString(),
@@ -28,7 +50,8 @@ const protect = async (req, res, next) => {
 
     next();
   } catch (error) {
-    return res.status(401).json({ success: false, message: 'Недействительный токен' });
+    console.error('Protect Middleware Error:', error);
+    return res.status(500).json({ success: false, message: 'Внутренняя ошибка сервера при проверке доступа' });
   }
 };
 

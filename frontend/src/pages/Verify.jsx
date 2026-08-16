@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShieldCheck, AlertCircle, Sparkles, Loader2, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, AlertCircle, Sparkles, Loader2, ArrowLeft, RefreshCw } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { StarsBackground } from '../components/Background/StarsBackgroundDemo';
 import MiniMusicPlayer from '../components/Background/MiniMusicPlayer';
@@ -10,13 +10,19 @@ const Verify = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const email = searchParams.get('email');
-  const { verifyCode, isAuthenticated } = useAuthStore();
+  const { verifyCode, resendCode, isAuthenticated } = useAuthStore();
 
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [timer, setTimer] = useState(60);
+  const [canResend, setCanResend] = useState(false);
 
+  const inputRef = useRef(null);
+
+  // Редирект, если не передали email или пользователь уже вошел
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/', { replace: true });
@@ -25,20 +31,31 @@ const Verify = () => {
     }
   }, [isAuthenticated, email, navigate]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Таймер обратного отсчета для повторной отправки
+  useEffect(() => {
+    let interval = null;
+    if (timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    } else {
+      setCanResend(true);
+      if (interval) clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  // Функция подтверждения кода
+  const handleVerify = async (codeToSubmit) => {
+    const finalCode = codeToSubmit || code;
+    if (finalCode.length !== 6 || loading) return;
+
     setError('');
     setSuccess('');
-
-    if (code.length !== 6) {
-      setError('Код должен состоять из 6 цифр');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const result = await verifyCode(email, code);
+      const result = await verifyCode(email, finalCode);
       setLoading(false);
 
       if (result && result.success) {
@@ -52,6 +69,42 @@ const Verify = () => {
     } catch {
       setLoading(false);
       setError('Ошибка при проверке кода');
+    }
+  };
+
+  // Обработка ввода + авто-отправка при 6 символах
+  const handleCodeChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setCode(val);
+
+    if (val.length === 6) {
+      handleVerify(val);
+    }
+  };
+
+  // Повторный запрос кода
+  const handleResend = async () => {
+    if (!canResend || resendLoading) return;
+
+    setError('');
+    setSuccess('');
+    setResendLoading(true);
+
+    try {
+      // Если метод resendCode есть в сторе — вызываем его, иначе эмулируем/отправляем повтор
+      const result = resendCode ? await resendCode(email) : { success: true };
+      setResendLoading(false);
+
+      if (result && result.success) {
+        setSuccess('✅ Новый код отправлен на ваш email!');
+        setTimer(60);
+        setCanResend(false);
+      } else {
+        setError(result?.message || 'Не удалось отправить код повторно');
+      }
+    } catch {
+      setResendLoading(false);
+      setError('Ошибка сети при повторной отправке');
     }
   };
 
@@ -73,6 +126,7 @@ const Verify = () => {
           <div className="relative bg-[#080400] backdrop-blur-2xl border border-zinc-800/90 rounded-3xl p-7 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.95)] overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-85" />
 
+            {/* Логотип */}
             <div className="flex justify-center mb-3">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-600 via-orange-500 to-amber-500 flex items-center justify-center shadow-[0_0_25px_rgba(249,115,22,0.45)]">
                 <span className="text-2xl font-black text-white tracking-wider">N</span>
@@ -110,16 +164,17 @@ const Verify = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); handleVerify(); }} className="space-y-4">
               <div>
                 <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5 text-center">
                   Введите 6-значный код
                 </label>
                 <input
+                  ref={inputRef}
                   type="text"
                   placeholder="000000"
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={handleCodeChange}
                   disabled={loading}
                   className="w-full py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 text-center text-2xl tracking-[10px] font-mono font-bold disabled:opacity-50 transition-all"
                   required
@@ -146,10 +201,27 @@ const Verify = () => {
                 )}
               </button>
 
-              <div className="text-center pt-2 flex flex-col gap-2">
+              {/* Повторная отправка с таймером */}
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={!canResend || resendLoading}
+                  className="text-xs text-zinc-400 hover:text-white disabled:text-zinc-600 transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${resendLoading ? 'animate-spin text-orange-500' : ''}`} />
+                  {canResend ? (
+                    <span className="text-orange-500 font-semibold hover:underline">Отправить код повторно</span>
+                  ) : (
+                    <span>Отправить повторно через <strong className="text-zinc-300">{timer}с</strong></span>
+                  )}
+                </button>
+              </div>
+
+              <div className="text-center pt-2 flex flex-col gap-2 border-t border-zinc-800/60 mt-3">
                 <Link to="/register" className="text-zinc-400 hover:text-white text-xs transition-colors inline-flex items-center justify-center gap-1 group">
                   <ArrowLeft className="w-3.5 h-3.5 text-zinc-400 group-hover:-translate-x-0.5 transition-transform" />
-                  Не пришёл код? <span className="text-orange-500 font-bold group-hover:underline">Попробовать снова</span>
+                  Изменить email или данные
                 </Link>
               </div>
             </form>

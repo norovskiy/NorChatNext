@@ -108,12 +108,12 @@ const Login = () => {
 
             <form onSubmit={handleLogin} className="space-y-3.5">
               <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Email или Username</label>
+                <label className="block text-[11px] font-medium text-zinc-400 mb-1 pl-0.5">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <input
                     type="text"
-                    placeholder="email@example.com или username"
+                    placeholder="email@example.com"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     disabled={loading}

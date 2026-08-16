@@ -30,19 +30,17 @@ const RadixCheckboxDemo = ({ checked, onCheckedChange, label }) => {
   return (
     <label 
       className="flex items-center gap-x-3 cursor-pointer group select-none"
-      role="checkbox"
-      aria-checked={checked}
     >
       <div className="relative">
         <input
           type="checkbox"
           checked={checked}
           onChange={(e) => onCheckedChange(e.target.checked)}
-          className="sr-only"
+          className="sr-only peer"
         />
         <motion.div
-          whileTap={{ scale: 0.85 }}
-          className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${
+          whileTap={{ scale: 0.88 }}
+          className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-orange-500/50 ${
             checked
               ? 'bg-gradient-to-tr from-orange-500 to-amber-500 border-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.4)]'
               : 'bg-[#141418] border-zinc-700 group-hover:border-zinc-500'
@@ -59,7 +57,7 @@ const RadixCheckboxDemo = ({ checked, onCheckedChange, label }) => {
           )}
         </motion.div>
       </div>
-      <span className="text-xs text-zinc-300 font-medium group-hover:text-white transition-colors">
+      <span className="text-xs text-zinc-300 font-medium group-hover:text-white transition-colors leading-tight">
         {label}
       </span>
     </label>
@@ -72,7 +70,7 @@ const MusicPreviewCard = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   
   const audioCtxRef = useRef(null);
-  const oscillatorsRef = useRef([]);
+  const activeNodesRef = useRef([]);
 
   const playlist = [
     { title: 'Lo-Fi Cyber Chill', station: 'NorChat Wave Station', freqs: [261.63, 329.63, 392.00, 523.25] },
@@ -81,10 +79,20 @@ const MusicPreviewCard = () => {
   ];
 
   const stopAudio = () => {
-    oscillatorsRef.current.forEach(osc => {
-      try { osc.stop(); } catch(e) {}
+    activeNodesRef.current.forEach(({ osc, gain }) => {
+      try {
+        if (audioCtxRef.current && audioCtxRef.current.state === 'running') {
+          gain.gain.setValueAtTime(gain.gain.value, audioCtxRef.current.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtxRef.current.currentTime + 0.05);
+          setTimeout(() => {
+            try { osc.stop(); } catch {}
+          }, 50);
+        } else {
+          osc.stop();
+        }
+      } catch {}
     });
-    oscillatorsRef.current = [];
+    activeNodesRef.current = [];
   };
 
   const startAudio = (trackIndex) => {
@@ -107,17 +115,17 @@ const MusicPreviewCard = () => {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(freq, ctx.currentTime);
 
-        gain.gain.setValueAtTime(0.02, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 1);
+        gain.gain.setValueAtTime(0.001, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.03, ctx.currentTime + 0.3);
         
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start();
 
-        oscillatorsRef.current.push(osc);
+        activeNodesRef.current.push({ osc, gain });
       });
     } catch (e) {
-      console.log('Audio autoplay prevented', e);
+      console.warn('Audio play error:', e);
     }
   };
 
@@ -154,6 +162,7 @@ const MusicPreviewCard = () => {
           <button
             onClick={togglePlay}
             className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center shadow-[0_0_18px_rgba(249,115,22,0.4)] text-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            aria-label={isPlaying ? 'Пауза' : 'Воспроизвести'}
           >
             {isPlaying ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white ml-0.5" />}
           </button>
@@ -179,7 +188,7 @@ const MusicPreviewCard = () => {
         <motion.div 
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="my-1 space-y-1 bg-black/50 p-2 rounded-xl border border-white/5"
+          className="my-1 space-y-1 bg-black/50 p-2 rounded-xl border border-white/5 max-h-24 overflow-y-auto"
         >
           {playlist.map((track, idx) => (
             <button
@@ -211,7 +220,7 @@ const MusicPreviewCard = () => {
 
       <div className="text-[10px] text-zinc-400 text-center bg-white/[0.02] py-1 rounded-lg border border-white/5 flex items-center justify-center gap-1.5">
         <Sparkles className="w-3 h-3 text-orange-400" />
-        <span>Нажми Play для прослушивания атмосферного фонового трека</span>
+        <span>Нажми Play для демо фоновой музыки</span>
       </div>
     </div>
   );
@@ -234,7 +243,7 @@ const SLIDES = [
             <span className="text-[10px] font-mono font-semibold text-emerald-400">LIVE • HD</span>
           </div>
           <div className="flex items-center gap-1.5 bg-orange-500/20 border border-orange-500/30 px-2.5 py-1 rounded-full text-orange-400 text-[10px] font-bold">
-            <Radio className="w-3 h-3 animate-spin" />
+            <Radio className="w-3 h-3 animate-pulse" />
             <span>Поиск собеседника</span>
           </div>
         </div>
@@ -282,7 +291,7 @@ const SLIDES = [
           ].map((tag, i) => (
             <motion.span 
               key={i}
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.04 }}
               className={`text-xs px-3 py-1.5 rounded-xl font-medium border transition-all ${
                 tag.active 
                   ? 'bg-gradient-to-r from-orange-500 to-amber-500 border-orange-400 text-white shadow-[0_0_12px_rgba(249,115,22,0.35)]' 
@@ -433,21 +442,21 @@ const Welcome = () => {
 
   const slideVariants = {
     enter: (dir) => ({
-      x: dir > 0 ? 120 : -120,
+      x: dir > 0 ? 100 : -100,
       opacity: 0,
-      scale: 0.95
+      scale: 0.96
     }),
     center: {
       x: 0,
       opacity: 1,
       scale: 1,
-      transition: { duration: 0.35, ease: 'easeOut' }
+      transition: { duration: 0.3, ease: 'easeOut' }
     },
     exit: (dir) => ({
-      x: dir < 0 ? 120 : -120,
+      x: dir < 0 ? 100 : -100,
       opacity: 0,
-      scale: 0.95,
-      transition: { duration: 0.25, ease: 'easeIn' }
+      scale: 0.96,
+      transition: { duration: 0.2, ease: 'easeIn' }
     })
   };
 
@@ -467,6 +476,7 @@ const Welcome = () => {
           
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-90" />
 
+          {/* Шапка */}
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-600 via-orange-500 to-amber-500 flex items-center justify-center shadow-[0_0_18px_rgba(249,115,22,0.4)]">
@@ -481,11 +491,12 @@ const Welcome = () => {
               onClick={() => setIsPolicyOpen(true)}
               className="text-xs text-orange-400 font-semibold hover:text-orange-300 transition-colors px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 cursor-pointer flex items-center gap-1"
             >
-              <span>На главную</span>
+              <span>Пропустить</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
+          {/* Контент слайдера */}
           <div className="min-h-[350px] flex flex-col justify-between">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
@@ -513,6 +524,7 @@ const Welcome = () => {
               </motion.div>
             </AnimatePresence>
 
+            {/* Навигация слайдера */}
             <div className="pt-6 flex items-center justify-between border-t border-zinc-800/80 mt-4">
               <div className="flex items-center gap-1.5">
                 {SLIDES.map((_, idx) => (
@@ -522,6 +534,7 @@ const Welcome = () => {
                       setDirection(idx > currentSlide ? 1 : -1);
                       setCurrentSlide(idx);
                     }}
+                    aria-label={`Перейти к слайду ${idx + 1}`}
                     className={`h-2 rounded-full transition-all cursor-pointer ${
                       idx === currentSlide
                         ? 'w-6 bg-gradient-to-r from-orange-500 to-amber-500'
@@ -535,7 +548,8 @@ const Welcome = () => {
                 {currentSlide > 0 && (
                   <button
                     onClick={handlePrev}
-                    className="p-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-white transition-all border border-zinc-700 cursor-pointer"
+                    aria-label="Назад"
+                    className="p-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-white transition-all border border-zinc-700 cursor-pointer active:scale-95"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -559,13 +573,14 @@ const Welcome = () => {
         </div>
       </div>
 
+      {/* Модальное окно Правил */}
       <AnimatePresence>
         {isPolicyOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.92, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              exit={{ opacity: 0, scale: 0.92, y: 15 }}
               transition={{ duration: 0.2 }}
               className="relative w-full max-w-lg bg-[#0C0C0E] border border-zinc-800 rounded-3xl p-6 sm:p-7 shadow-[0_25px_60px_rgba(0,0,0,0.95)] overflow-hidden"
             >
@@ -576,7 +591,7 @@ const Welcome = () => {
                   <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
                     <FileText className="w-4 h-4" />
                   </div>
-                  <span className="text-white">Правила Сообщества и Условия</span>
+                  <span className="text-white">Правила Сообщества</span>
                 </div>
                 <button
                   onClick={() => setIsPolicyOpen(false)}
@@ -600,28 +615,24 @@ const Welcome = () => {
                 <div className="space-y-2">
                   <div className="font-bold text-white text-xs flex items-center gap-1.5 text-amber-400">
                     <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>1. Категорически запрещено во время видеозвонков:</span>
+                    <span>1. Категорически запрещено:</span>
                   </div>
                   <ul className="space-y-1.5 pl-2 text-zinc-300">
                     <li className="flex items-start gap-2">
                       <span className="text-orange-500 font-bold">•</span>
-                      <span>Любые формы оскорблений, нецензурная брань, мат и агрессивное поведение.</span>
+                      <span>Любые формы оскорблений, нецензурная брань, мат и агрессия.</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-orange-500 font-bold">•</span>
-                      <span>Демонстрация контента 18+ (порнография, нагота, шок-контент, жестокость).</span>
+                      <span>Демонстрация контента 18+ (порнография, нагота, жестокость).</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-orange-500 font-bold">•</span>
-                      <span>Травля, преследование, разжигание ненависти по национальным, религиозным и иным признакам.</span>
+                      <span>Травля, преследование, разжигание ненависти.</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-orange-500 font-bold">•</span>
-                      <span>Реклама, спам, распространение вредоносных ссылок и мошеннические действия.</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-orange-500 font-bold">•</span>
-                      <span>Порча работы сервиса, использование ботов или скриптов обхода фильтрации.</span>
+                      <span>Реклама, спам, распространение вредоносных ссылок.</span>
                     </li>
                   </ul>
                 </div>
@@ -632,16 +643,16 @@ const Welcome = () => {
                     <span>2. Анонимность и Защита Данных:</span>
                   </div>
                   <p className="leading-relaxed">
-                    Мы уважительно относимся к вашей приватности. Сервис не требует передачи паспортных данных или личных соцсетей.
+                    Мы уважительно относимся к вашей приватности. Сервис не требует передачи паспортных данных или соцсетей.
                   </p>
                   <ul className="space-y-1.5 pl-2 text-zinc-300">
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-400 font-bold">•</span>
-                      <span>Мы <strong className="text-white">никогда не передаем персональные данные третьим лицам</strong>.</span>
+                      <span>Мы <strong className="text-white">никогда не передаем данные третьим лицам</strong>.</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-400 font-bold">•</span>
-                      <span>Все видеопотоки защищены и не сохраняются на наших серверах.</span>
+                      <span>Все видеопотоки защищены и не сохраняются на серверах.</span>
                     </li>
                   </ul>
                 </div>
@@ -649,10 +660,10 @@ const Welcome = () => {
                 <div className="space-y-2 pt-1 border-t border-zinc-800/60">
                   <div className="font-bold text-white text-xs flex items-center gap-1.5 text-red-400">
                     <UserX className="w-3.5 h-3.5" />
-                    <span>3. Нарушения и Блокировка:</span>
+                    <span>3. Блокировка:</span>
                   </div>
                   <p className="leading-relaxed text-zinc-400">
-                    При получении жалоб на мат, неподобающее поведение или вредительство, система автоматически выдает персональную блокировку устройства/IP без возможности восстановления доступа.
+                    При получении жалоб на мат или неподобающее поведение система автоматически блокирует устройство без возможности восстановления.
                   </p>
                 </div>
 
@@ -662,7 +673,7 @@ const Welcome = () => {
                     <span>4. Возрастные ограничения:</span>
                   </div>
                   <p className="text-[11px] text-zinc-500">
-                    Использование NorChat разрешено строго лицам, достигшим 16 лет. Нажимая кнопку продолжения, вы подтверждаете соблюдение всех условий.
+                    Использование NorChat разрешено строго лицам, достигшим 16 лет.
                   </p>
                 </div>
               </div>

@@ -117,17 +117,19 @@ const useAuthStore = create(
       },
 
       updateUser: async (data) => {
-        try {
-          const response = await api.put('/api/users/profile', data);
-          set({ user: response.data.user });
-          return { success: true, user: response.data.user };
-        } catch (error) {
-          return {
-            success: false,
-            message: error.response?.data?.message || 'Update failed',
-          };
-        }
-      },
+  try {
+    const response = await api.put('/api/users/profile', data);
+    const updatedUser = response.data.user || response.data;
+    
+    set((state) => ({ user: { ...state.user, ...updatedUser } }));
+    return { success: true, user: updatedUser };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Update failed',
+    };
+  }
+},
 
       forgotPassword: async (email) => {
         try {

@@ -11,11 +11,11 @@ import {
   ArrowLeft, 
   Eye, 
   EyeOff, 
-  ShieldCheck 
+  ShieldCheck,
+  CheckCircle2
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { StarsBackground } from '../components/Background/StarsBackgroundDemo';
-import MiniMusicPlayer from '../components/Background/MiniMusicPlayer';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -37,8 +37,8 @@ const ForgotPassword = () => {
 
     const trimmedEmail = email.trim().toLowerCase();
 
-    if (!trimmedEmail || !trimmedEmail.includes('@')) {
-      setError('Введите корректный email');
+    if (!trimmedEmail || !trimmedEmail.includes('@') || !trimmedEmail.includes('.')) {
+      setError('Введите корректный email адрес');
       return;
     }
 
@@ -52,11 +52,11 @@ const ForgotPassword = () => {
         setSuccess('✅ Код отправлен на ваш email!');
         setStep('reset');
       } else {
-        setError(result?.message || 'Ошибка отправки кода');
+        setError(result?.message || 'Пользователь с таким email не найден');
       }
     } catch {
       setLoading(false);
-      setError('Не удалось отправить запрос');
+      setError('Не удалось отправить запрос. Попробуйте позже');
     }
   };
 
@@ -66,7 +66,7 @@ const ForgotPassword = () => {
     setSuccess('');
 
     if (code.length !== 6) {
-      setError('Введите 6-значный код');
+      setError('Введите 6-значный код из письма');
       return;
     }
 
@@ -86,10 +86,10 @@ const ForgotPassword = () => {
       setLoading(false);
 
       if (result && result.success) {
-        setSuccess('✅ Пароль изменён! Перенаправляем...');
-        setTimeout(() => navigate('/login', { replace: true }), 1500);
+        setSuccess('✅ Пароль успешно изменён! Перенаправление...');
+        setTimeout(() => navigate('/login', { replace: true }), 1200);
       } else {
-        setError(result?.message || 'Неверный код или ошибка сброса');
+        setError(result?.message || 'Неверный код или срок его действия истёк');
       }
     } catch {
       setLoading(false);
@@ -106,7 +106,8 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#060608] text-white flex items-center justify-center p-4">
+    <div className="relative min-h-screen overflow-hidden bg-[#060608] text-white flex items-center justify-center p-4 select-none">
+      {/* Анимированный фоновый космос */}
       <StarsBackground 
         starColor="#FFFFFF"
         factor={0.08}
@@ -114,28 +115,38 @@ const ForgotPassword = () => {
         className="absolute inset-0 w-full h-full pointer-events-none"
       />
 
+      {/* Оранжевый неоновый градиент на фоне */}
       <div className="absolute w-[360px] h-[360px] bg-orange-500/15 rounded-full blur-[130px] pointer-events-none -z-0" />
 
-      <MiniMusicPlayer autoPlay={true} />
-
       <div className="relative z-10 w-full max-w-[430px]">
-        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.97 }} 
+          animate={{ opacity: 1, scale: 1 }} 
+          transition={{ duration: 0.3 }}
+        >
           <div className="relative bg-[#080400] backdrop-blur-2xl border border-zinc-800/90 rounded-3xl p-7 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.95)] overflow-hidden">
+            {/* Верхний светящийся бордер */}
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-85" />
 
+            {/* Логотип */}
             <div className="flex justify-center mb-3">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-600 via-orange-500 to-amber-500 flex items-center justify-center shadow-[0_0_25px_rgba(249,115,22,0.45)]">
                 <span className="text-2xl font-black text-white tracking-wider">N</span>
               </div>
             </div>
 
+            {/* Название и Подзаголовок */}
             <div className="text-center mb-6">
               <h1 className="text-2xl font-black tracking-tight">
                 <span className="text-white">Nor</span>
                 <span className="text-orange-500 drop-shadow-[0_0_12px_rgba(249,115,22,0.5)]">Chat</span>
               </h1>
+              <p className="text-[11px] text-zinc-400 mt-1">
+                {step === 'email' ? 'Восстановление доступа к аккаунту' : 'Придумайте новый пароль'}
+              </p>
             </div>
 
+            {/* Ошибки и Успешные сообщения */}
             {error && (
               <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2.5">
                 <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
@@ -149,6 +160,7 @@ const ForgotPassword = () => {
               </div>
             )}
 
+            {/* ЭТАП 1: Ввод Email */}
             {step === 'email' && (
               <form onSubmit={handleSendCode} className="space-y-3.5">
                 <div>
@@ -163,6 +175,7 @@ const ForgotPassword = () => {
                       disabled={loading}
                       className="w-full pl-10 pr-3.5 py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 disabled:opacity-50 transition-all"
                       required
+                      autoFocus
                     />
                   </div>
                 </div>
@@ -170,13 +183,13 @@ const ForgotPassword = () => {
                 <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !email.trim()}
                     className="w-full py-3.5 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-[0_4px_22px_rgba(249,115,22,0.4)] disabled:opacity-50 cursor-pointer active:scale-[0.99]"
                   >
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Отправка...
+                        Отправка кода...
                       </span>
                     ) : (
                       'Получить код восстановления'
@@ -184,15 +197,19 @@ const ForgotPassword = () => {
                   </button>
                 </div>
 
-                <div className="text-center pt-1">
-                  <Link to="/login" className="text-zinc-400 hover:text-white text-xs transition-colors inline-flex items-center gap-1 group">
+                <div className="text-center pt-2 border-t border-zinc-800/60 mt-4">
+                  <Link 
+                    to="/login" 
+                    className="text-zinc-400 hover:text-white text-xs transition-colors inline-flex items-center gap-1 group py-1"
+                  >
                     <ArrowLeft className="w-3.5 h-3.5 text-zinc-400 group-hover:-translate-x-0.5 transition-transform" />
-                    Вспомнил пароль
+                    Вспомнил пароль? <span className="text-orange-500 font-bold group-hover:underline">Войти</span>
                   </Link>
                 </div>
               </form>
             )}
 
+            {/* ЭТАП 2: Ввод Кода и Нового Пароля */}
             {step === 'reset' && (
               <form onSubmit={handleResetPassword} className="space-y-3.5">
                 <div className="text-center mb-3">
@@ -215,11 +232,14 @@ const ForgotPassword = () => {
                       value={code}
                       onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       disabled={loading}
-                      className="w-full pl-10 pr-3.5 py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 text-center text-xl tracking-[6px] font-mono font-bold disabled:opacity-50 transition-all"
+                      className="w-full pl-10 pr-3.5 py-3.5 bg-[#141418] border border-zinc-800 rounded-xl text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/30 text-center text-xl tracking-[8px] font-mono font-bold disabled:opacity-50 transition-all"
                       required
                       maxLength={6}
                       autoFocus
                     />
+                  </div>
+                  <div className="text-[10px] text-zinc-500 text-center mt-1">
+                    {code.length}/6 символов
                   </div>
                 </div>
 
@@ -259,19 +279,22 @@ const ForgotPassword = () => {
                         Сохранение...
                       </span>
                     ) : (
-                      'Сменить пароль'
+                      <span className="flex items-center justify-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Сменить пароль
+                      </span>
                     )}
                   </button>
                 </div>
 
-                <div className="text-center pt-1">
+                <div className="text-center pt-2 border-t border-zinc-800/60 mt-4">
                   <button
                     type="button"
                     onClick={handleBackToEmail}
                     disabled={loading}
-                    className="text-zinc-500 hover:text-white text-xs transition-colors underline bg-transparent border-none cursor-pointer"
+                    className="text-zinc-400 hover:text-white text-xs transition-colors underline bg-transparent border-none cursor-pointer"
                   >
-                    Изменить email
+                    Изменить email или отправить повторно
                   </button>
                 </div>
               </form>

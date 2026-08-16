@@ -7,10 +7,14 @@ require('dotenv').config();
 
 const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
-const socketHandler = require('./src/socket/socketHandler'); // 👈 Модуль обработки сокетов
+const socketHandler = require('./src/socket/socketHandler');
 
 const app = express();
 const server = http.createServer(app);
+
+// 🔑 Доверяем первому прокси (Render, Heroku, Nginx, Cloudflare)
+// Необходима для корректной работы express-rate-limit и определения IP
+app.set('trust proxy', 1);
 
 const corsOptions = {
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -45,7 +49,6 @@ const io = new Server(server, {
   transports: ['websocket', 'polling']
 });
 
-// 🔑 Передаем экземпляр io в socketHandler
 socketHandler(io);
 
 // 404 & Error Handlers
@@ -72,7 +75,7 @@ mongoose.connect(MONGODB_URI)
     process.exit(1);
   });
 
-// Self-ping для гибернации (Render / Railway / Heroku)
+// Self-ping для предотвращения гибернации
 if (process.env.SELF_PING_URL) {
   setInterval(async () => {
     try {
@@ -86,12 +89,18 @@ const runningServer = server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
 
-// Завершение работы (Graceful Shutdown)
-const shutdown = () => {
-  runningServer.close(() => {
-    mongoose.connection.close(false, () => {
+// Безопасное завершение работы (Graceful Shutdown)
+const shutdown = async () => {
+  console.log('⏳ Shutting down server...');
+  runningServer.close(async () => {
+    try {
+      await mongoose.connection.close();
+      console.log('✅ MongoDB connection closed.');
       process.exit(0);
-    });
+    } catch (err) {
+      console.error('❌ Error during shutdown:', err);
+      process.exit(1);
+    }
   });
 };
 
