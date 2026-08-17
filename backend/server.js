@@ -9,6 +9,7 @@ require('dotenv').config();
 
 const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
+const adminRoutes = require('./src/routes/adminRoutes'); // 👈 1. Импорт роутов админки
 const socketHandler = require('./src/socket/socketHandler');
 
 const app = express();
@@ -24,8 +25,8 @@ app.use(helmet({
 
 // 🛡️ Глобальный Rate Limiter (Защита от DDoS)
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 минут
-  max: 1000, // максимум 1000 запросов с одного IP
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Слишком много запросов с вашего IP, попробуйте позже.' }
@@ -41,13 +42,14 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// 📦 Парсинг JSON с увеличенным лимитом для загрузки фото/аватарок
+// 📦 Парсинг JSON
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // HTTP Роуты
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes); // 👈 2. Подключение роутов админки
 
 // Проверка здоровья сервера
 app.get('/health', (req, res) => {
@@ -69,6 +71,9 @@ const io = new Server(server, {
   pingInterval: 25000,
   transports: ['websocket', 'polling']
 });
+
+// 👈 3. Сохраняем io в инстанс Express для доступа в контроллерах (req.app.get('io'))
+app.set('io', io);
 
 socketHandler(io);
 
@@ -96,7 +101,7 @@ mongoose.connect(MONGODB_URI)
     process.exit(1);
   });
 
-// Self-ping для предотвращения гибернации Render
+// Self-ping для предотвращения гибернации
 if (process.env.SELF_PING_URL) {
   setInterval(async () => {
     try {
